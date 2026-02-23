@@ -4,9 +4,9 @@ import "time"
 
 // Org represents a client
 type Org struct {
-	ID            int
-	Name          string
-	CreatedAt     time.Time
-	UpdatedAt     *time.Time
-	InactivatedAt *time.Time
+	ID            int        `json:"id"`
+	Name          string     `json:"name"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     *time.Time `json:"updated_at"`
+	InactivatedAt *time.Time `json:"inactivated_at"`
 }

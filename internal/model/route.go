@@ -14,11 +14,11 @@ type HTTPMethod string
 
 // Route represents a possible API endpoint to push a call to
 type Route struct {
-	ID            int
-	Pattern       string
-	BackendURL    string
-	Method        HTTPMethod
-	CreatedAt     time.Time
-	UpdatedAt     *time.Time
-	InactivatedAt *time.Time
+	ID            int        `json:"id"`
+	Pattern       string     `json:"pattern"`
+	BackendURL    string     `json:"backend_url"`
+	Method        HTTPMethod `json:"method"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     *time.Time `json:"updated_at"`
+	InactivatedAt *time.Time `json:"inactivated_at"`
 }

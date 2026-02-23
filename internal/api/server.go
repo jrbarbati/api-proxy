@@ -7,12 +7,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/go-chi/chi/v5"
 	"log"
 	"net/http"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // Server represents an HTTP server with graceful shutdown support.
@@ -35,9 +36,12 @@ func NewServer(c *config.Config, db *sql.DB, routeRepository *repository.RouteRe
 func (server *Server) Start() error {
 	r := chi.NewRouter()
 
-	r.Route("/api/v1", func(r chi.Router) {
+	r.Route("/api/v1/admin", func(r chi.Router) {
 		r.Route("/routes", func(r chi.Router) {
+			r.Get("/", server.handleGetRoutes)
+			r.Get("/{id}", server.handleGetRoute)
 			r.Post("/", server.handleCreateRoute)
+			r.Put("/{id}", server.handleUpdateRoute)
 		})
 	})
 

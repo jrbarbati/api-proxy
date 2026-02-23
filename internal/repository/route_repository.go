@@ -7,9 +7,12 @@ import (
 )
 
 const (
-	findActiveByPatternAndMethod = "SELECT id, pattern, backend_url, method, created_at, updated_at, inactivated_at FROM route where pattern = ? and method = ? and inactivated_at IS NULL"
-	insertRoute                  = "INSERT INTO route (pattern, backend_url, method, updated_at, inactivated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP(6), null)"
-	updateRoute                  = "UPDATE route SET backend_url = ?, method = ?, updated_at = CURRENT_TIMESTAMP(6), inactivated_at = ? WHERE id = ?"
+	findActive         = "SELECT id, pattern, backend_url, method, created_at, updated_at, inactivated_at FROM route where inactivated_at is null"
+	patternWhereClause = " AND pattern = ?"
+	methodWhereClause  = " AND method = ?"
+	findByID           = "SELECT id, pattern, backend_url, method, created_at, updated_at, inactivated_at FROM route where id = ?"
+	insertRoute        = "INSERT INTO route (pattern, backend_url, method, updated_at, inactivated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP(6), null)"
+	updateRoute        = "UPDATE route SET backend_url = ?, method = ?, updated_at = CURRENT_TIMESTAMP(6), inactivated_at = ? WHERE id = ?"
 )
 
 var ErrNoRowsAffectedOnRouteInsert = errors.New("no rows affected during insertion of route - expected 1 row to be affected")
@@ -20,34 +23,36 @@ type RouteRepository struct {
 	db *sql.DB
 }
 
+type RouteFilter struct {
+	Pattern string
+	Method  string
+}
+
 func NewRouteRepository(db *sql.DB) *RouteRepository {
 	return &RouteRepository{db}
 }
 
-// FindActiveByPatternAndMethod queries and returns an active route matching the pattern and method provided
-func (rr *RouteRepository) FindActiveByPatternAndMethod(pattern, method string) (*model.Route, error) {
-	var route model.Route
-	row := rr.db.QueryRow(findActiveByPatternAndMethod, pattern, method)
+// FindActiveByFilter queries routes from the DB using the specified filters
+func (rr *RouteRepository) FindActiveByFilter(filter *RouteFilter) ([]*model.Route, error) {
+	var args []any
+	query := findActive
 
-	err := row.Scan(
-		&route.ID,
-		&route.Pattern,
-		&route.BackendURL,
-		&route.Method,
-		&route.CreatedAt,
-		&route.UpdatedAt,
-		&route.InactivatedAt,
-	)
-
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
+	if filter.Pattern != "" {
+		query += patternWhereClause
+		args = append(args, filter.Pattern)
 	}
 
-	if err != nil {
-		return nil, err
+	if filter.Method != "" {
+		query += methodWhereClause
+		args = append(args, filter.Method)
 	}
 
-	return &route, nil
+	return rr.findRoutes(query, args...)
+}
+
+// FindByID queries the DB and returns a single route with matching ID
+func (rr *RouteRepository) FindByID(id int) (*model.Route, error) {
+	return rr.findRoute(findByID, id)
 }
 
 // Insert creates a new active route in the database and returns it
@@ -97,4 +102,67 @@ func (rr *RouteRepository) Update(route *model.Route) (*model.Route, error) {
 	}
 
 	return route, nil
+}
+
+func (rr *RouteRepository) findRoutes(query string, args ...any) ([]*model.Route, error) {
+	routes := make([]*model.Route, 0)
+
+	result, err := rr.db.Query(query, args...)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer result.Close()
+
+	for result.Next() {
+		var route model.Route
+
+		rowErr := result.Scan(
+			&route.ID,
+			&route.Pattern,
+			&route.BackendURL,
+			&route.Method,
+			&route.CreatedAt,
+			&route.UpdatedAt,
+			&route.InactivatedAt,
+		)
+
+		if rowErr != nil {
+			return nil, rowErr
+		}
+
+		routes = append(routes, &route)
+	}
+
+	if err := result.Err(); err != nil {
+		return nil, err
+	}
+
+	return routes, nil
+}
+
+func (rr *RouteRepository) findRoute(query string, args ...any) (*model.Route, error) {
+	var route model.Route
+	row := rr.db.QueryRow(query, args...)
+
+	err := row.Scan(
+		&route.ID,
+		&route.Pattern,
+		&route.BackendURL,
+		&route.Method,
+		&route.CreatedAt,
+		&route.UpdatedAt,
+		&route.InactivatedAt,
+	)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &route, nil
 }

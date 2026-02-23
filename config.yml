@@ -1,0 +1,9 @@
+server:
+  port: "8080"
+
+db:
+  url: localhost
+  port: "3306"
+  username: root
+  password: secret
+  db_name: api_proxy

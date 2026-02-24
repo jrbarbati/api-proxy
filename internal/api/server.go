@@ -23,6 +23,7 @@ type Server struct {
 	routeRepository          *repository.RouteRepository
 	orgRepository            *repository.OrgRepository
 	serviceAccountRepository *repository.ServiceAccountRepository
+	rateLimitRepository      *repository.RateLimitRepository
 }
 
 // NewServer creates a server listening on the specified port
@@ -32,6 +33,7 @@ func NewServer(
 	routeRepository *repository.RouteRepository,
 	orgRepository *repository.OrgRepository,
 	serviceAccountRepository *repository.ServiceAccountRepository,
+	rateLimitRepository *repository.RateLimitRepository,
 ) *Server {
 	return &Server{
 		port:                     c.Server.Port,
@@ -39,6 +41,7 @@ func NewServer(
 		routeRepository:          routeRepository,
 		orgRepository:            orgRepository,
 		serviceAccountRepository: serviceAccountRepository,
+		rateLimitRepository:      rateLimitRepository,
 	}
 }
 

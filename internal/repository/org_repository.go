@@ -84,6 +84,11 @@ func (or *OrgRepository) Update(org *model.Org) (*model.Org, error) {
 	return org, nil
 }
 
+// Delete removes any existing org if it's ID matches the given id
+func (or *OrgRepository) Delete(id int) error {
+	return errors.New("not implemented")
+}
+
 func (or *OrgRepository) findOrgs(query string, args ...any) ([]*model.Org, error) {
 	orgs := make([]*model.Org, 0)
 

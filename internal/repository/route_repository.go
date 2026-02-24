@@ -104,6 +104,11 @@ func (rr *RouteRepository) Update(route *model.Route) (*model.Route, error) {
 	return route, nil
 }
 
+// Delete removes any existing route if it's ID matches the given id
+func (rr *RouteRepository) Delete(id int) error {
+	return errors.New("not implemented")
+}
+
 func (rr *RouteRepository) findRoutes(query string, args ...any) ([]*model.Route, error) {
 	routes := make([]*model.Route, 0)
 

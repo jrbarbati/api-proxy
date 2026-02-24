@@ -13,3 +13,7 @@ type RateLimit struct {
 	UpdatedAt        *time.Time `json:"updated_at"`
 	InactivatedAt    *time.Time `json:"inactivated_at"`
 }
+
+func (rl RateLimit) GetID() int {
+	return rl.ID
+}

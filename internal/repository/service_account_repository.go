@@ -111,6 +111,11 @@ func (sar *ServiceAccountRepository) Update(serviceAccount *model.ServiceAccount
 	return serviceAccount, nil
 }
 
+// Delete removes any existing service account if it's ID matches the given id
+func (sar *ServiceAccountRepository) Delete(id int) error {
+	return errors.New("not implemented")
+}
+
 func (sar *ServiceAccountRepository) findServiceAccounts(query string, args ...any) ([]*model.ServiceAccount, error) {
 	serviceAccounts := make([]*model.ServiceAccount, 0)
 

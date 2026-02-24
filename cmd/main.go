@@ -29,6 +29,8 @@ func main() {
 		appConfig,
 		database,
 		repository.NewRouteRepository(database),
+		repository.NewOrgRepository(database),
+		repository.NewServiceAccountRepository(database),
 	)
 
 	log.Printf("Listening on port %v", server.Port())

@@ -18,17 +18,27 @@ import (
 
 // Server represents an HTTP server with graceful shutdown support.
 type Server struct {
-	port            string
-	db              *sql.DB
-	routeRepository *repository.RouteRepository
+	port                     string
+	db                       *sql.DB
+	routeRepository          *repository.RouteRepository
+	orgRepository            *repository.OrgRepository
+	serviceAccountRepository *repository.ServiceAccountRepository
 }
 
 // NewServer creates a server listening on the specified port
-func NewServer(c *config.Config, db *sql.DB, routeRepository *repository.RouteRepository) *Server {
+func NewServer(
+	c *config.Config,
+	db *sql.DB,
+	routeRepository *repository.RouteRepository,
+	orgRepository *repository.OrgRepository,
+	serviceAccountRepository *repository.ServiceAccountRepository,
+) *Server {
 	return &Server{
-		port:            c.Server.Port,
-		db:              db,
-		routeRepository: routeRepository,
+		port:                     c.Server.Port,
+		db:                       db,
+		routeRepository:          routeRepository,
+		orgRepository:            orgRepository,
+		serviceAccountRepository: serviceAccountRepository,
 	}
 }
 
@@ -38,6 +48,20 @@ func (server *Server) Start() error {
 
 	r.Route("/api/v1/admin", func(r chi.Router) {
 		r.Route("/routes", func(r chi.Router) {
+			r.Get("/", server.handleGetRoutes)
+			r.Get("/{id}", server.handleGetRoute)
+			r.Post("/", server.handleCreateRoute)
+			r.Put("/{id}", server.handleUpdateRoute)
+		})
+
+		r.Route("/orgs", func(r chi.Router) {
+			r.Get("/", server.handleGetRoutes)
+			r.Get("/{id}", server.handleGetRoute)
+			r.Post("/", server.handleCreateRoute)
+			r.Put("/{id}", server.handleUpdateRoute)
+		})
+
+		r.Route("/serviceAccounts", func(r chi.Router) {
 			r.Get("/", server.handleGetRoutes)
 			r.Get("/{id}", server.handleGetRoute)
 			r.Post("/", server.handleCreateRoute)

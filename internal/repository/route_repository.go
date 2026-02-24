@@ -7,10 +7,10 @@ import (
 )
 
 const (
-	findActive         = "SELECT id, pattern, backend_url, method, created_at, updated_at, inactivated_at FROM route where inactivated_at is null"
+	findActiveRoutes   = "SELECT id, pattern, backend_url, method, created_at, updated_at, inactivated_at FROM route where inactivated_at is null"
 	patternWhereClause = " AND pattern = ?"
 	methodWhereClause  = " AND method = ?"
-	findByID           = "SELECT id, pattern, backend_url, method, created_at, updated_at, inactivated_at FROM route where id = ?"
+	findRouteByID      = "SELECT id, pattern, backend_url, method, created_at, updated_at, inactivated_at FROM route where id = ?"
 	insertRoute        = "INSERT INTO route (pattern, backend_url, method, updated_at, inactivated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP(6), null)"
 	updateRoute        = "UPDATE route SET backend_url = ?, method = ?, updated_at = CURRENT_TIMESTAMP(6), inactivated_at = ? WHERE id = ?"
 )
@@ -35,7 +35,7 @@ func NewRouteRepository(db *sql.DB) *RouteRepository {
 // FindActiveByFilter queries routes from the DB using the specified filters
 func (rr *RouteRepository) FindActiveByFilter(filter *RouteFilter) ([]*model.Route, error) {
 	var args []any
-	query := findActive
+	query := findActiveRoutes
 
 	if filter.Pattern != "" {
 		query += patternWhereClause
@@ -52,7 +52,7 @@ func (rr *RouteRepository) FindActiveByFilter(filter *RouteFilter) ([]*model.Rou
 
 // FindByID queries the DB and returns a single route with matching ID
 func (rr *RouteRepository) FindByID(id int) (*model.Route, error) {
-	return rr.findRoute(findByID, id)
+	return rr.findRoute(findRouteByID, id)
 }
 
 // Insert creates a new active route in the database and returns it

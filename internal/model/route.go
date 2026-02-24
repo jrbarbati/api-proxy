@@ -26,3 +26,7 @@ type Route struct {
 func (route Route) GetID() int {
 	return route.ID
 }
+
+func (route Route) SetID(id int) {
+	route.ID = id
+}

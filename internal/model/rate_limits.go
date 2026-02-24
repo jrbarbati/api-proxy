@@ -17,3 +17,7 @@ type RateLimit struct {
 func (rl RateLimit) GetID() int {
 	return rl.ID
 }
+
+func (rl RateLimit) SetID(id int) {
+	rl.ID = id
+}

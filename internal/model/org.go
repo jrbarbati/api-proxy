@@ -14,3 +14,7 @@ type Org struct {
 func (org Org) GetID() int {
 	return org.ID
 }
+
+func (org Org) SetID(id int) {
+	org.ID = id
+}

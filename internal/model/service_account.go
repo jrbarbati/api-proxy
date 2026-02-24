@@ -18,3 +18,7 @@ type ServiceAccount struct {
 func (sa ServiceAccount) GetID() int {
 	return sa.ID
 }
+
+func (sa ServiceAccount) SetID(id int) {
+	sa.ID = id
+}

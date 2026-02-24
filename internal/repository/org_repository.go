@@ -11,6 +11,7 @@ const (
 	findOrgByID    = "SELECT id, name, created_at, updated_at, inactivated_at FROM org where id = ?"
 	insertOrg      = "INSERT INTO org (name, updated_at, inactivated_at) VALUES (?, CURRENT_TIMESTAMP(6), null)"
 	updateOrg      = "UPDATE org SET name = ?, updated_at = CURRENT_TIMESTAMP(6), inactivated_at = ? WHERE id = ?"
+	deleteOrg      = "DELETE FROM org WHERE id = ?"
 )
 
 var ErrNoRowsAffectedOnOrgInsert = errors.New("no rows affected during insertion of org - expected 1 row to be affected")
@@ -23,6 +24,10 @@ type OrgRepository struct {
 
 func NewOrgRepository(db *sql.DB) *OrgRepository {
 	return &OrgRepository{db}
+}
+
+func (or *OrgRepository) DB() *sql.DB {
+	return or.db
 }
 
 // FindActive queries orgs from the DB using the specified filters
@@ -86,7 +91,7 @@ func (or *OrgRepository) Update(org *model.Org) (*model.Org, error) {
 
 // Delete removes any existing org if it's ID matches the given id
 func (or *OrgRepository) Delete(id int) error {
-	return errors.New("not implemented")
+	return deleteById[*OrgRepository](deleteOrg, id, or)
 }
 
 func (or *OrgRepository) findOrgs(query string, args ...any) ([]*model.Org, error) {

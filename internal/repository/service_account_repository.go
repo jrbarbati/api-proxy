@@ -13,6 +13,7 @@ const (
 	findServiceAccountByID    = "SELECT id, org_id, identifier, client_id, client_secret, created_at, updated_at, inactivated_at FROM service_account where id = ?"
 	insertServiceAccount      = "INSERT INTO service_account (org_id, identifier, client_id, client_secret, updated_at, inactivated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP(6), null)"
 	updateServiceAccount      = "UPDATE service_account SET identifier = ?, client_id = ?, client_secret = ?, updated_at = CURRENT_TIMESTAMP(6), inactivated_at = ? WHERE id = ?"
+	deleteServiceAccount      = "DELETE FROM service_account WHERE id = ?"
 )
 
 var ErrNoRowsAffectedOnServiceAccountInsert = errors.New("no rows affected during insertion of service account - expected 1 row to be affected")
@@ -30,6 +31,10 @@ type ServiceAccountFilter struct {
 
 func NewServiceAccountRepository(db *sql.DB) *ServiceAccountRepository {
 	return &ServiceAccountRepository{db}
+}
+
+func (sar *ServiceAccountRepository) DB() *sql.DB {
+	return sar.db
 }
 
 // FindActiveByFilter queries service accounts from the DB using the specified filters
@@ -57,6 +62,7 @@ func (sar *ServiceAccountRepository) FindByID(id int) (*model.ServiceAccount, er
 
 // Insert creates a new active service account in the database and returns it
 func (sar *ServiceAccountRepository) Insert(serviceAccount *model.ServiceAccount) (*model.ServiceAccount, error) {
+	// This repeated code can be abstracted
 	exec, err := sar.db.Exec(insertServiceAccount, serviceAccount.OrgID, serviceAccount.Identifier, serviceAccount.ClientID, serviceAccount.ClientSecret)
 
 	if err != nil {
@@ -113,7 +119,7 @@ func (sar *ServiceAccountRepository) Update(serviceAccount *model.ServiceAccount
 
 // Delete removes any existing service account if it's ID matches the given id
 func (sar *ServiceAccountRepository) Delete(id int) error {
-	return errors.New("not implemented")
+	return deleteById[*ServiceAccountRepository](deleteServiceAccount, id, sar)
 }
 
 func (sar *ServiceAccountRepository) findServiceAccounts(query string, args ...any) ([]*model.ServiceAccount, error) {

@@ -11,10 +11,8 @@ const (
 	findOrgByID    = "SELECT id, name, created_at, updated_at, inactivated_at FROM org where id = ?"
 	insertOrg      = "INSERT INTO org (name, updated_at, inactivated_at) VALUES (?, CURRENT_TIMESTAMP(6), null)"
 	updateOrg      = "UPDATE org SET name = ?, updated_at = CURRENT_TIMESTAMP(6), inactivated_at = ? WHERE id = ?"
+	deleteOrg      = "DELETE FROM org WHERE id = ?"
 )
-
-var ErrNoRowsAffectedOnOrgInsert = errors.New("no rows affected during insertion of org - expected 1 row to be affected")
-var ErrNoRowsAffectedOnOrgUpdate = errors.New("no rows affected during update of org - expected at least 1 row to be affected")
 
 // OrgRepository represents an object through which Org queries can be run
 type OrgRepository struct {
@@ -37,51 +35,30 @@ func (or *OrgRepository) FindByID(id int) (*model.Org, error) {
 
 // Insert creates a new active org in the database and returns it
 func (or *OrgRepository) Insert(org *model.Org) (*model.Org, error) {
-	exec, err := or.db.Exec(insertOrg, org.Name)
+	createdId, err := execInsert(or.db, insertOrg, org.Name)
 
 	if err != nil {
 		return nil, err
 	}
 
-	rowsAffected, err := exec.RowsAffected()
-
-	if err != nil {
-		return nil, err
-	}
-
-	if rowsAffected == 0 {
-		return nil, ErrNoRowsAffectedOnOrgInsert
-	}
-
-	id, err := exec.LastInsertId()
-
-	if err != nil {
-		return nil, err
-	}
-
-	org.ID = int(id)
+	org.ID = createdId
 	return org, nil
 }
 
 // Update updates an existing org in the database and returns the updated data
 func (or *OrgRepository) Update(org *model.Org) (*model.Org, error) {
-	exec, err := or.db.Exec(updateOrg, org.Name, org.InactivatedAt, org.ID)
+	err := execUpdate(or.db, updateOrg, org.Name, org.InactivatedAt, org.ID)
 
 	if err != nil {
 		return nil, err
-	}
-
-	rowsAffected, err := exec.RowsAffected()
-
-	if err != nil {
-		return nil, err
-	}
-
-	if rowsAffected == 0 {
-		return nil, ErrNoRowsAffectedOnOrgUpdate
 	}
 
 	return org, nil
+}
+
+// Delete removes any existing org if it's ID matches the given id
+func (or *OrgRepository) Delete(id int) error {
+	return execDelete(or.db, deleteOrg, id)
 }
 
 func (or *OrgRepository) findOrgs(query string, args ...any) ([]*model.Org, error) {

@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"api-proxy/internal/model"
 	"database/sql"
 	"errors"
 )
@@ -9,59 +8,54 @@ import (
 var ErrNoRowsAffectedOnInsert = errors.New("no rows affected during insertion - expected 1 row to be affected")
 var ErrNoRowsAffectedOnUpdate = errors.New("no rows affected during update - expected at least 1 row to be affected")
 
-type Repository interface {
-	DB() *sql.DB
-}
-
-func insert[T Repository, F model.Identifiable](repository T, data F, query string, args ...any) (*F, error) {
-	exec, err := repository.DB().Exec(query, args...)
+func execInsert(db *sql.DB, query string, args ...any) (int, error) {
+	exec, err := db.Exec(query, args...)
 
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	rowsAffected, err := exec.RowsAffected()
 
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	if rowsAffected == 0 {
-		return nil, ErrNoRowsAffectedOnInsert
+		return 0, ErrNoRowsAffectedOnInsert
 	}
 
 	id, err := exec.LastInsertId()
 
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
-	data.SetID(int(id))
-	return &data, nil
+	return int(id), nil
 }
 
-func update[T Repository, F model.Identifiable](repository T, data F, query string, args ...any) (*F, error) {
-	exec, err := repository.DB().Exec(query, args...)
+func execUpdate(db *sql.DB, query string, args ...any) error {
+	exec, err := db.Exec(query, args...)
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	rowsAffected, err := exec.RowsAffected()
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if rowsAffected == 0 {
-		return nil, ErrNoRowsAffectedOnUpdate
+		return ErrNoRowsAffectedOnUpdate
 	}
 
-	return &data, nil
+	return nil
 }
 
-func deleteById[T Repository](query string, id int, repository T) error {
-	_, err := repository.DB().Exec(query, id)
+func execDelete(db *sql.DB, query string, args ...any) error {
+	_, err := db.Exec(query, args)
 
 	if err != nil {
 		return err

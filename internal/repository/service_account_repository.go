@@ -13,10 +13,8 @@ const (
 	findServiceAccountByID    = "SELECT id, org_id, identifier, client_id, client_secret, created_at, updated_at, inactivated_at FROM service_account where id = ?"
 	insertServiceAccount      = "INSERT INTO service_account (org_id, identifier, client_id, client_secret, updated_at, inactivated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP(6), null)"
 	updateServiceAccount      = "UPDATE service_account SET identifier = ?, client_id = ?, client_secret = ?, updated_at = CURRENT_TIMESTAMP(6), inactivated_at = ? WHERE id = ?"
+	deleteServiceAccount      = "DELETE FROM service_account WHERE id = ?"
 )
-
-var ErrNoRowsAffectedOnServiceAccountInsert = errors.New("no rows affected during insertion of service account - expected 1 row to be affected")
-var ErrNoRowsAffectedOnServiceAccountUpdate = errors.New("no rows affected during update of service account - expected at least 1 row to be affected")
 
 // ServiceAccountRepository represents an object through which ServiceAccount queries can be run
 type ServiceAccountRepository struct {
@@ -57,35 +55,20 @@ func (sar *ServiceAccountRepository) FindByID(id int) (*model.ServiceAccount, er
 
 // Insert creates a new active service account in the database and returns it
 func (sar *ServiceAccountRepository) Insert(serviceAccount *model.ServiceAccount) (*model.ServiceAccount, error) {
-	exec, err := sar.db.Exec(insertServiceAccount, serviceAccount.OrgID, serviceAccount.Identifier, serviceAccount.ClientID, serviceAccount.ClientSecret)
+	createdId, err := execInsert(sar.db, insertServiceAccount, serviceAccount.OrgID, serviceAccount.Identifier, serviceAccount.ClientID, serviceAccount.ClientSecret)
 
 	if err != nil {
 		return nil, err
 	}
 
-	rowsAffected, err := exec.RowsAffected()
-
-	if err != nil {
-		return nil, err
-	}
-
-	if rowsAffected == 0 {
-		return nil, ErrNoRowsAffectedOnServiceAccountInsert
-	}
-
-	id, err := exec.LastInsertId()
-
-	if err != nil {
-		return nil, err
-	}
-
-	serviceAccount.ID = int(id)
+	serviceAccount.ID = createdId
 	return serviceAccount, nil
 }
 
 // Update updates an existing service account in the database and returns the updated data
 func (sar *ServiceAccountRepository) Update(serviceAccount *model.ServiceAccount) (*model.ServiceAccount, error) {
-	exec, err := sar.db.Exec(
+	err := execUpdate(
+		sar.db,
 		updateServiceAccount,
 		serviceAccount.Identifier,
 		serviceAccount.ClientID,
@@ -98,17 +81,12 @@ func (sar *ServiceAccountRepository) Update(serviceAccount *model.ServiceAccount
 		return nil, err
 	}
 
-	rowsAffected, err := exec.RowsAffected()
-
-	if err != nil {
-		return nil, err
-	}
-
-	if rowsAffected == 0 {
-		return nil, ErrNoRowsAffectedOnServiceAccountUpdate
-	}
-
 	return serviceAccount, nil
+}
+
+// Delete removes any existing service account if it's ID matches the given id
+func (sar *ServiceAccountRepository) Delete(id int) error {
+	return execDelete(sar.db, deleteServiceAccount, id)
 }
 
 func (sar *ServiceAccountRepository) findServiceAccounts(query string, args ...any) ([]*model.ServiceAccount, error) {

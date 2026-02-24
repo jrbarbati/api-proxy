@@ -1,8 +1,6 @@
 package model
 
-import (
-	"time"
-)
+import "time"
 
 type ServiceAccount struct {
 	ID            int        `json:"id"`
@@ -13,12 +11,4 @@ type ServiceAccount struct {
 	CreatedAt     time.Time  `json:"created_at"`
 	UpdatedAt     *time.Time `json:"updated_at"`
 	InactivatedAt *time.Time `json:"inactivated_at"`
-}
-
-func (sa ServiceAccount) GetID() int {
-	return sa.ID
-}
-
-func (sa ServiceAccount) SetID(id int) {
-	sa.ID = id
 }

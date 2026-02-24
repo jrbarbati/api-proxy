@@ -10,11 +10,3 @@ type Org struct {
 	UpdatedAt     *time.Time `json:"updated_at"`
 	InactivatedAt *time.Time `json:"inactivated_at"`
 }
-
-func (org Org) GetID() int {
-	return org.ID
-}
-
-func (org Org) SetID(id int) {
-	org.ID = id
-}

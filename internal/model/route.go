@@ -22,11 +22,3 @@ type Route struct {
 	UpdatedAt     *time.Time `json:"updated_at"`
 	InactivatedAt *time.Time `json:"inactivated_at"`
 }
-
-func (route Route) GetID() int {
-	return route.ID
-}
-
-func (route Route) SetID(id int) {
-	route.ID = id
-}

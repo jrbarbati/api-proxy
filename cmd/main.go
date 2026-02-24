@@ -31,7 +31,6 @@ func main() {
 		repository.NewRouteRepository(database),
 		repository.NewOrgRepository(database),
 		repository.NewServiceAccountRepository(database),
-		repository.NewRateLimitRepository(database),
 	)
 
 	log.Printf("Listening on port %v", server.Port())

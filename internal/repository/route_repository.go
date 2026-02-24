@@ -13,7 +13,6 @@ const (
 	findRouteByID      = "SELECT id, pattern, backend_url, method, created_at, updated_at, inactivated_at FROM route where id = ?"
 	insertRoute        = "INSERT INTO route (pattern, backend_url, method, updated_at, inactivated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP(6), null)"
 	updateRoute        = "UPDATE route SET backend_url = ?, method = ?, updated_at = CURRENT_TIMESTAMP(6), inactivated_at = ? WHERE id = ?"
-	deleteRoute        = "DELETE FROM route where id = ?"
 )
 
 var ErrNoRowsAffectedOnRouteInsert = errors.New("no rows affected during insertion of route - expected 1 row to be affected")
@@ -31,10 +30,6 @@ type RouteFilter struct {
 
 func NewRouteRepository(db *sql.DB) *RouteRepository {
 	return &RouteRepository{db}
-}
-
-func (rr *RouteRepository) DB() *sql.DB {
-	return rr.db
 }
 
 // FindActiveByFilter queries routes from the DB using the specified filters
@@ -62,62 +57,51 @@ func (rr *RouteRepository) FindByID(id int) (*model.Route, error) {
 
 // Insert creates a new active route in the database and returns it
 func (rr *RouteRepository) Insert(route *model.Route) (*model.Route, error) {
-	// TODO: is this good abstraction?
-	return insert[*RouteRepository](rr, *route, insertRoute, route.BackendURL, route.Method)
+	exec, err := rr.db.Exec(insertRoute, route.Pattern, route.BackendURL, route.Method)
 
-	//exec, err := rr.db.Exec(insertRoute, route.Pattern, route.BackendURL, route.Method)
-	//
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//rowsAffected, err := exec.RowsAffected()
-	//
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//if rowsAffected == 0 {
-	//	return nil, ErrNoRowsAffectedOnRouteInsert
-	//}
-	//
-	//id, err := exec.LastInsertId()
-	//
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//route.ID = int(id)
-	//return route, nil
+	if err != nil {
+		return nil, err
+	}
+
+	rowsAffected, err := exec.RowsAffected()
+
+	if err != nil {
+		return nil, err
+	}
+
+	if rowsAffected == 0 {
+		return nil, ErrNoRowsAffectedOnRouteInsert
+	}
+
+	id, err := exec.LastInsertId()
+
+	if err != nil {
+		return nil, err
+	}
+
+	route.ID = int(id)
+	return route, nil
 }
 
 // Update updates an existing route in the database and returns the updated data
 func (rr *RouteRepository) Update(route *model.Route) (*model.Route, error) {
-	// TODO: Is this good abstraction?
-	return update[*RouteRepository](rr, *route, updateRoute, route)
+	exec, err := rr.db.Exec(updateRoute, route.BackendURL, route.Method, route.InactivatedAt, route.ID)
 
-	//exec, err := rr.db.Exec(updateRoute, route.BackendURL, route.Method, route.InactivatedAt, route.ID)
-	//
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//rowsAffected, err := exec.RowsAffected()
-	//
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//if rowsAffected == 0 {
-	//	return nil, ErrNoRowsAffectedOnRouteUpdate
-	//}
-	//
-	//return route, nil
-}
+	if err != nil {
+		return nil, err
+	}
 
-// Delete removes any existing route if it's ID matches the given id
-func (rr *RouteRepository) Delete(id int) error {
-	return deleteById[*RouteRepository](deleteRoute, id, rr)
+	rowsAffected, err := exec.RowsAffected()
+
+	if err != nil {
+		return nil, err
+	}
+
+	if rowsAffected == 0 {
+		return nil, ErrNoRowsAffectedOnRouteUpdate
+	}
+
+	return route, nil
 }
 
 func (rr *RouteRepository) findRoutes(query string, args ...any) ([]*model.Route, error) {

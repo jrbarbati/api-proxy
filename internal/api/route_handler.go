@@ -4,6 +4,9 @@ import (
 	"api-proxy/internal/model"
 	"api-proxy/internal/repository"
 	"net/http"
+	"strconv"
+
+	"github.com/go-chi/chi/v5"
 )
 
 func (server *Server) handleGetRoutes(w http.ResponseWriter, r *http.Request) {
@@ -23,17 +26,72 @@ func (server *Server) handleGetRoutes(w http.ResponseWriter, r *http.Request) {
 }
 
 func (server *Server) handleGetRoute(w http.ResponseWriter, r *http.Request) {
-	handleGetByID[model.Route](w, r, "route", server.routeRepository.FindByID)
+	uriId, strconvErr := strconv.Atoi(chi.URLParam(r, "id"))
+
+	if strconvErr != nil {
+		writeError(w, newError("invalid id in the uri", http.StatusBadRequest))
+		return
+	}
+
+	route, err := server.routeRepository.FindByID(uriId)
+
+	if err != nil {
+		writeError(w, newError("unexpected error.", http.StatusInternalServerError))
+		return
+	}
+
+	if route == nil {
+		writeError(w, newError("route not found", http.StatusNotFound))
+		return
+	}
+
+	writeJSON(w, route, http.StatusOK)
 }
 
 func (server *Server) handleCreateRoute(w http.ResponseWriter, r *http.Request) {
-	handlePost[model.Route](w, r, server.routeRepository.Insert)
+	route, err := decodeJSON[model.Route](r)
+
+	if err != nil {
+		writeError(w, newError("unable to read json request body", http.StatusBadRequest))
+		return
+	}
+
+	created, err := server.routeRepository.Insert(route)
+
+	if err != nil {
+		writeError(w, newError("unexpected error", http.StatusInternalServerError))
+		return
+	}
+
+	writeJSON(w, created, http.StatusCreated)
 }
 
 func (server *Server) handleUpdateRoute(w http.ResponseWriter, r *http.Request) {
-	handlePut[model.Route](w, r, server.routeRepository.Update)
-}
+	uriId, strconvErr := strconv.Atoi(chi.URLParam(r, "id"))
 
-func (server *Server) handleDeleteRoute(w http.ResponseWriter, r *http.Request) {
-	handleDelete(w, r, server.routeRepository.Delete)
+	if strconvErr != nil {
+		writeError(w, newError("invalid id in the uri", http.StatusBadRequest))
+		return
+	}
+
+	route, err := decodeJSON[model.Route](r)
+
+	if err != nil {
+		writeError(w, newError("unable to read json request body", http.StatusBadRequest))
+		return
+	}
+
+	if route.ID != uriId {
+		writeError(w, newError("id in uri must match request body id", http.StatusBadRequest))
+		return
+	}
+
+	updated, err := server.routeRepository.Update(route)
+
+	if err != nil {
+		writeError(w, newError("unexpected error", http.StatusInternalServerError))
+		return
+	}
+
+	writeJSON(w, updated, http.StatusOK)
 }

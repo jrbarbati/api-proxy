@@ -1,7 +1,7 @@
 package api
 
 import (
-	"api-proxy/internal/repository"
+	"api-proxy/internal/model"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -9,7 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func handleGetByID[T repository.Identifiable](w http.ResponseWriter, r *http.Request, requestType string, findById func(id int) (*T, error)) {
+func handleGetByID[T model.Identifiable](w http.ResponseWriter, r *http.Request, requestType string, findById func(id int) (*T, error)) {
 	uriId, strconvErr := strconv.Atoi(chi.URLParam(r, "id"))
 
 	if strconvErr != nil {
@@ -32,7 +32,7 @@ func handleGetByID[T repository.Identifiable](w http.ResponseWriter, r *http.Req
 	writeJSON(w, result, http.StatusOK)
 }
 
-func handlePut[T repository.Identifiable](w http.ResponseWriter, r *http.Request, update func(req *T) (*T, error)) {
+func handlePut[T model.Identifiable](w http.ResponseWriter, r *http.Request, update func(req *T) (*T, error)) {
 	uriId, strconvErr := strconv.Atoi(chi.URLParam(r, "id"))
 
 	if strconvErr != nil {
@@ -62,7 +62,7 @@ func handlePut[T repository.Identifiable](w http.ResponseWriter, r *http.Request
 	writeJSON(w, updated, http.StatusOK)
 }
 
-func handlePost[T repository.Identifiable](w http.ResponseWriter, r *http.Request, insert func(req *T) (*T, error)) {
+func handlePost[T model.Identifiable](w http.ResponseWriter, r *http.Request, insert func(req *T) (*T, error)) {
 	request, err := decodeJSON[T](r)
 
 	if err != nil {

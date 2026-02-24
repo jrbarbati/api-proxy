@@ -16,9 +16,6 @@ const (
 	deleteRateLimit             = "DELETE FROM rate_limit WHERE id = ?"
 )
 
-var ErrNoRowsAffectedOnRateLimitInsert = errors.New("no rows affected during insertion of rate limit - expected 1 row to be affected")
-var ErrNoRowsAffectedOnRateLimitUpdate = errors.New("no rows affected during update of rate limit - expected at least 1 row to be affected")
-
 // RateLimitRepository represents an object through which RateLimit queries can be run
 type RateLimitRepository struct {
 	db *sql.DB
@@ -31,10 +28,6 @@ type RateLimitFilter struct {
 
 func NewRateLimitRepository(db *sql.DB) *RateLimitRepository {
 	return &RateLimitRepository{db}
-}
-
-func (rlr *RateLimitRepository) DB() *sql.DB {
-	return rlr.db
 }
 
 // FindActiveByFilter queries rate limits from the database using the specified filters

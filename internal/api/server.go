@@ -23,6 +23,7 @@ type Server struct {
 	routeRepository          *repository.RouteRepository
 	orgRepository            *repository.OrgRepository
 	serviceAccountRepository *repository.ServiceAccountRepository
+	rateLimitRepository      *repository.RateLimitRepository
 }
 
 // NewServer creates a server listening on the specified port
@@ -32,6 +33,7 @@ func NewServer(
 	routeRepository *repository.RouteRepository,
 	orgRepository *repository.OrgRepository,
 	serviceAccountRepository *repository.ServiceAccountRepository,
+	rateLimitRepository *repository.RateLimitRepository,
 ) *Server {
 	return &Server{
 		port:                     c.Server.Port,
@@ -39,6 +41,7 @@ func NewServer(
 		routeRepository:          routeRepository,
 		orgRepository:            orgRepository,
 		serviceAccountRepository: serviceAccountRepository,
+		rateLimitRepository:      rateLimitRepository,
 	}
 }
 
@@ -55,17 +58,24 @@ func (server *Server) Start() error {
 		})
 
 		r.Route("/orgs", func(r chi.Router) {
-			r.Get("/", server.handleGetRoutes)
-			r.Get("/{id}", server.handleGetRoute)
-			r.Post("/", server.handleCreateRoute)
-			r.Put("/{id}", server.handleUpdateRoute)
+			r.Get("/", server.handleGetOrgs)
+			r.Get("/{id}", server.handleGetOrg)
+			r.Post("/", server.handleCreateOrg)
+			r.Put("/{id}", server.handleUpdateOrg)
 		})
 
 		r.Route("/serviceAccounts", func(r chi.Router) {
-			r.Get("/", server.handleGetRoutes)
-			r.Get("/{id}", server.handleGetRoute)
-			r.Post("/", server.handleCreateRoute)
-			r.Put("/{id}", server.handleUpdateRoute)
+			r.Get("/", server.handleGetServiceAccounts)
+			r.Get("/{id}", server.handleGetServiceAccount)
+			r.Post("/", server.handleCreateServiceAccount)
+			r.Put("/{id}", server.handleUpdateServiceAccount)
+		})
+
+		r.Route("/rateLimits", func(r chi.Router) {
+			r.Get("/", server.handleGetRateLimits)
+			r.Get("/{id}", server.handleGetRateLimit)
+			r.Post("/", server.handleCreateRateLimit)
+			r.Put("/{id}", server.handleUpdateRateLimit)
 		})
 	})
 

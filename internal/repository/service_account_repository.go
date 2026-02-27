@@ -7,13 +7,14 @@ import (
 )
 
 const (
-	findActiveServiceAccounts = "SELECT id, org_id, identifier, client_id, client_secret, created_at, updated_at, inactivated_at FROM service_account where inactivated_at is null"
-	identifierWhereClause     = " AND identifier = ?"
-	clientIdWhereClause       = " AND client_id = ?"
-	findServiceAccountByID    = "SELECT id, org_id, identifier, client_id, client_secret, created_at, updated_at, inactivated_at FROM service_account where id = ?"
-	insertServiceAccount      = "INSERT INTO service_account (org_id, identifier, client_id, client_secret, updated_at, inactivated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP(6), null)"
-	updateServiceAccount      = "UPDATE service_account SET identifier = ?, client_id = ?, client_secret = ?, updated_at = CURRENT_TIMESTAMP(6), inactivated_at = ? WHERE id = ?"
-	deleteServiceAccount      = "DELETE FROM service_account WHERE id = ?"
+	findActiveServiceAccounts    = "SELECT id, org_id, identifier, client_id, client_secret, created_at, updated_at, inactivated_at FROM service_account where inactivated_at is null"
+	identifierWhereClause        = " AND identifier = ?"
+	clientIdWhereClause          = " AND client_id = ?"
+	findServiceAccountByID       = "SELECT id, org_id, identifier, client_id, client_secret, created_at, updated_at, inactivated_at FROM service_account where id = ?"
+	findServiceAccountByClientID = "SELECT id, org_id, identifier, client_id, client_secret, created_at, updated_at, inactivated_at FROM service_account where client_id = ?"
+	insertServiceAccount         = "INSERT INTO service_account (org_id, identifier, client_id, client_secret, updated_at, inactivated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP(6), null)"
+	updateServiceAccount         = "UPDATE service_account SET identifier = ?, client_id = ?, client_secret = ?, updated_at = CURRENT_TIMESTAMP(6), inactivated_at = ? WHERE id = ?"
+	deleteServiceAccount         = "DELETE FROM service_account WHERE id = ?"
 )
 
 // ServiceAccountRepository represents an object through which ServiceAccount queries can be run
@@ -51,6 +52,11 @@ func (sar *ServiceAccountRepository) FindActiveByFilter(filter *ServiceAccountFi
 // FindByID queries the DB and returns a single service account with matching ID
 func (sar *ServiceAccountRepository) FindByID(id int) (*model.ServiceAccount, error) {
 	return sar.findServiceAccount(findServiceAccountByID, id)
+}
+
+// FindByClientID queries the DB and returns a single service account with matching client id
+func (sar *ServiceAccountRepository) FindByClientID(clientID string) (*model.ServiceAccount, error) {
+	return sar.findServiceAccount(findServiceAccountByClientID, clientID)
 }
 
 // Insert creates a new active service account in the database and returns it

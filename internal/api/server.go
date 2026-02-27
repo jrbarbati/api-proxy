@@ -18,6 +18,8 @@ import (
 
 // Server represents an HTTP server with graceful shutdown support.
 type Server struct {
+	jwtSigningSecret         string
+	adminJwtSigningSecret    string
 	port                     string
 	db                       *sql.DB
 	routeRepository          *repository.RouteRepository
@@ -37,6 +39,8 @@ func NewServer(
 ) *Server {
 	return &Server{
 		port:                     c.Server.Port,
+		jwtSigningSecret:         c.JWTConfig.SigningSecret,
+		adminJwtSigningSecret:    c.JWTConfig.Admin.SigningSecret,
 		db:                       db,
 		routeRepository:          routeRepository,
 		orgRepository:            orgRepository,
@@ -49,7 +53,17 @@ func NewServer(
 func (server *Server) Start() error {
 	r := chi.NewRouter()
 
+	r.Route("/api/v1/oauth/token", func(r chi.Router) {
+		r.Post("/", server.handleOAuth)
+	})
+
 	r.Route("/api/v1/admin", func(r chi.Router) {
+		r.Route("/oauth/token", func(r chi.Router) {
+			r.Post("/", func(writer http.ResponseWriter, request *http.Request) {
+				http.Error(writer, "Not implemented", http.StatusNotImplemented) // TODO: Admin Auth
+			})
+		})
+
 		r.Route("/routes", func(r chi.Router) {
 			r.Get("/", server.handleGetRoutes)
 			r.Get("/{id}", server.handleGetRoute)

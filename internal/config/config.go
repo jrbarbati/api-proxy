@@ -1,8 +1,9 @@
 package config
 
 import (
-	"gopkg.in/yaml.v3"
 	"os"
+
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -10,8 +11,9 @@ const (
 )
 
 type Config struct {
-	Server *ServerConfig `yaml:"server"`
-	DB     *DBConfig     `yaml:"db"`
+	Server    *ServerConfig `yaml:"server"`
+	DB        *DBConfig     `yaml:"db"`
+	JWTConfig *JWTConfig    `yaml:"jwt"`
 }
 
 type ServerConfig struct {
@@ -24,6 +26,15 @@ type DBConfig struct {
 	Password string `yaml:"password"`
 	Port     string `yaml:"port"`
 	DBName   string `yaml:"db_name"`
+}
+
+type JWTConfig struct {
+	SigningSecret string          `yaml:"signing_secret"`
+	Admin         *AdminJWTConfig `yaml:"admin"`
+}
+
+type AdminJWTConfig struct {
+	SigningSecret string `yaml:"signing_secret"`
 }
 
 func LoadConfig(path string) (*Config, error) {
@@ -52,6 +63,14 @@ func applyEnvOverrides(config *Config) *Config {
 		config.DB = &DBConfig{}
 	}
 
+	if config.JWTConfig == nil {
+		config.JWTConfig = &JWTConfig{}
+	}
+
+	if config.JWTConfig.Admin == nil {
+		config.JWTConfig.Admin = &AdminJWTConfig{}
+	}
+
 	if val := os.Getenv("SERVER_PORT"); val != "" {
 		config.Server.Port = val
 	}
@@ -74,6 +93,14 @@ func applyEnvOverrides(config *Config) *Config {
 
 	if val := os.Getenv("DB_NAME"); val != "" {
 		config.DB.DBName = val
+	}
+
+	if val := os.Getenv("JWT_SIGNING_SECRET"); val != "" {
+		config.JWTConfig.SigningSecret = val
+	}
+
+	if val := os.Getenv("ADMIN_JWT_SIGNING_SECRET"); val != "" {
+		config.JWTConfig.Admin.SigningSecret = val
 	}
 
 	if config.Server.Port == "" {

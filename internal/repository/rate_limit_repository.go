@@ -27,7 +27,7 @@ type RateLimitFilter struct {
 }
 
 func NewRateLimitRepository(db *sql.DB) *RateLimitRepository {
-	return &RateLimitRepository{db}
+	return &RateLimitRepository{db: db}
 }
 
 // FindActiveByFilter queries rate limits from the database using the specified filters

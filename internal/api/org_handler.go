@@ -12,7 +12,7 @@ func (server *Server) handleGetOrgs(w http.ResponseWriter, r *http.Request) {
 	active, err := server.orgRepository.FindActive()
 
 	if err != nil {
-		writeError(w, newError("unexpected error.", http.StatusInternalServerError))
+		http.Error(w, "unexpected error.", http.StatusInternalServerError)
 		return
 	}
 
@@ -23,19 +23,19 @@ func (server *Server) handleGetOrg(w http.ResponseWriter, r *http.Request) {
 	uriId, strconvErr := strconv.Atoi(chi.URLParam(r, "id"))
 
 	if strconvErr != nil {
-		writeError(w, newError("invalid id in the uri", http.StatusBadRequest))
+		http.Error(w, "invalid id in the uri", http.StatusBadRequest)
 		return
 	}
 
 	route, err := server.orgRepository.FindByID(uriId)
 
 	if err != nil {
-		writeError(w, newError("unexpected error.", http.StatusInternalServerError))
+		http.Error(w, "unexpected error.", http.StatusInternalServerError)
 		return
 	}
 
 	if route == nil {
-		writeError(w, newError("route not found", http.StatusNotFound))
+		http.Error(w, "route not found", http.StatusNotFound)
 		return
 	}
 
@@ -46,14 +46,14 @@ func (server *Server) handleCreateOrg(w http.ResponseWriter, r *http.Request) {
 	route, err := decodeJSON[model.Org](r)
 
 	if err != nil {
-		writeError(w, newError("unable to read json request body", http.StatusBadRequest))
+		http.Error(w, "unable to read json request body", http.StatusBadRequest)
 		return
 	}
 
 	created, err := server.orgRepository.Insert(route)
 
 	if err != nil {
-		writeError(w, newError("unexpected error", http.StatusInternalServerError))
+		http.Error(w, "unexpected error", http.StatusInternalServerError)
 		return
 	}
 
@@ -64,26 +64,26 @@ func (server *Server) handleUpdateOrg(w http.ResponseWriter, r *http.Request) {
 	uriId, strconvErr := strconv.Atoi(chi.URLParam(r, "id"))
 
 	if strconvErr != nil {
-		writeError(w, newError("invalid id in the uri", http.StatusBadRequest))
+		http.Error(w, "invalid id in the uri", http.StatusBadRequest)
 		return
 	}
 
 	route, err := decodeJSON[model.Org](r)
 
 	if err != nil {
-		writeError(w, newError("unable to read json request body", http.StatusBadRequest))
+		http.Error(w, "unable to read json request body", http.StatusBadRequest)
 		return
 	}
 
 	if route.ID != uriId {
-		writeError(w, newError("id in uri must match request body id", http.StatusBadRequest))
+		http.Error(w, "id in uri must match request body id", http.StatusBadRequest)
 		return
 	}
 
 	updated, err := server.orgRepository.Update(route)
 
 	if err != nil {
-		writeError(w, newError("unexpected error", http.StatusInternalServerError))
+		http.Error(w, "unexpected error", http.StatusInternalServerError)
 		return
 	}
 

@@ -20,7 +20,7 @@ type OrgRepository struct {
 }
 
 func NewOrgRepository(db *sql.DB) *OrgRepository {
-	return &OrgRepository{db}
+	return &OrgRepository{db: db}
 }
 
 // FindActive queries orgs from the DB using the specified filters

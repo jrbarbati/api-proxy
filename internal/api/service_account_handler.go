@@ -18,7 +18,7 @@ func (server *Server) handleGetServiceAccounts(w http.ResponseWriter, r *http.Re
 	active, err := server.serviceAccountRepository.FindActiveByFilter(filter)
 
 	if err != nil {
-		writeError(w, newError("unexpected error.", http.StatusInternalServerError))
+		http.Error(w, "unexpected error.", http.StatusInternalServerError)
 		return
 	}
 
@@ -29,19 +29,19 @@ func (server *Server) handleGetServiceAccount(w http.ResponseWriter, r *http.Req
 	uriId, strconvErr := strconv.Atoi(chi.URLParam(r, "id"))
 
 	if strconvErr != nil {
-		writeError(w, newError("invalid id in the uri", http.StatusBadRequest))
+		http.Error(w, "invalid id in the uri", http.StatusBadRequest)
 		return
 	}
 
 	route, err := server.serviceAccountRepository.FindByID(uriId)
 
 	if err != nil {
-		writeError(w, newError("unexpected error.", http.StatusInternalServerError))
+		http.Error(w, "unexpected error.", http.StatusInternalServerError)
 		return
 	}
 
 	if route == nil {
-		writeError(w, newError("route not found", http.StatusNotFound))
+		http.Error(w, "route not found", http.StatusNotFound)
 		return
 	}
 
@@ -52,14 +52,14 @@ func (server *Server) handleCreateServiceAccount(w http.ResponseWriter, r *http.
 	route, err := decodeJSON[model.ServiceAccount](r)
 
 	if err != nil {
-		writeError(w, newError("unable to read json request body", http.StatusBadRequest))
+		http.Error(w, "unable to read json request body", http.StatusBadRequest)
 		return
 	}
 
 	created, err := server.serviceAccountRepository.Insert(route)
 
 	if err != nil {
-		writeError(w, newError("unexpected error", http.StatusInternalServerError))
+		http.Error(w, "unexpected error", http.StatusInternalServerError)
 		return
 	}
 
@@ -70,26 +70,26 @@ func (server *Server) handleUpdateServiceAccount(w http.ResponseWriter, r *http.
 	uriId, strconvErr := strconv.Atoi(chi.URLParam(r, "id"))
 
 	if strconvErr != nil {
-		writeError(w, newError("invalid id in the uri", http.StatusBadRequest))
+		http.Error(w, "invalid id in the uri", http.StatusBadRequest)
 		return
 	}
 
 	route, err := decodeJSON[model.ServiceAccount](r)
 
 	if err != nil {
-		writeError(w, newError("unable to read json request body", http.StatusBadRequest))
+		http.Error(w, "unable to read json request body", http.StatusBadRequest)
 		return
 	}
 
 	if route.ID != uriId {
-		writeError(w, newError("id in uri must match request body id", http.StatusBadRequest))
+		http.Error(w, "id in uri must match request body id", http.StatusBadRequest)
 		return
 	}
 
 	updated, err := server.serviceAccountRepository.Update(route)
 
 	if err != nil {
-		writeError(w, newError("unexpected error", http.StatusInternalServerError))
+		http.Error(w, "unexpected error", http.StatusInternalServerError)
 		return
 	}
 

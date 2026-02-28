@@ -93,22 +93,22 @@ func issueTokenForServiceAccount(signingSecret string, serviceAccount *model.Ser
 }
 
 func findServiceAccount(serviceAccountRepository *repository.ServiceAccountRepository, clientId, clientSecret string) (*model.ServiceAccount, error) {
-	serviceAccount, err := serviceAccountRepository.FindByClientID(clientId)
+	account, err := serviceAccountRepository.FindByClientID(clientId)
 
 	if err != nil {
 		return nil, err
 	}
 
 	savedSecret := "$2a$10$Zs3OyuUJSShI5qQiM/SDQuqdXBEhpfqG4h9A4gUC/StpJlVz9TUUa" // Preventing side-channel attack
-	if serviceAccount != nil {
-		savedSecret = serviceAccount.ClientSecret
+	if account != nil {
+		savedSecret = account.ClientSecret
 	}
 
 	if !matches(savedSecret, clientSecret) {
 		return nil, nil
 	}
 
-	return serviceAccount, nil
+	return account, nil
 }
 
 func matches(savedSecret, requestSecret string) bool {

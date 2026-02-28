@@ -28,7 +28,7 @@ type ServiceAccountFilter struct {
 }
 
 func NewServiceAccountRepository(db *sql.DB) *ServiceAccountRepository {
-	return &ServiceAccountRepository{db}
+	return &ServiceAccountRepository{db: db}
 }
 
 // FindActiveByFilter queries service accounts from the DB using the specified filters

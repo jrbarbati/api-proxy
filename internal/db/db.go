@@ -4,8 +4,9 @@ import (
 	"api-proxy/internal/config"
 	"database/sql"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
 	"time"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 // Connect builds a connection to a database, specified by the config, verifies it can connect and returns the connection pool

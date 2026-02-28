@@ -27,7 +27,7 @@ type RouteFilter struct {
 }
 
 func NewRouteRepository(db *sql.DB) *RouteRepository {
-	return &RouteRepository{db}
+	return &RouteRepository{db: db}
 }
 
 // FindActiveByFilter queries routes from the DB using the specified filters

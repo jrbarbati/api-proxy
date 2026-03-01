@@ -12,7 +12,36 @@ const (
 	bearer = "Bearer "
 )
 
-func ExtractBearerToken(r *http.Request) (string, error) {
+func HandleAuth(jwtSigningSecret, desiredTokenType string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			token, err := extractBearerToken(r)
+
+			if err != nil {
+				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+				return
+			}
+
+			claims, err := verifyJWT(token, jwtSigningSecret)
+
+			if err != nil {
+				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+				return
+			}
+
+			tokenType, ok := claims["type"]
+
+			if !ok || tokenType != desiredTokenType {
+				http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func extractBearerToken(r *http.Request) (string, error) {
 	authHeader := r.Header.Get("Authorization")
 
 	if authHeader == "" {
@@ -26,7 +55,7 @@ func ExtractBearerToken(r *http.Request) (string, error) {
 	return strings.TrimPrefix(authHeader, bearer), nil
 }
 
-func VerifyJWT(token, jwtSigningSecret string) (jwt.MapClaims, error) {
+func verifyJWT(token, jwtSigningSecret string) (jwt.MapClaims, error) {
 	parsed, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("unexpected signing method")

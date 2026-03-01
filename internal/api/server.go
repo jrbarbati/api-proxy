@@ -1,6 +1,7 @@
 package api
 
 import (
+	"api-proxy/internal/api/middleware"
 	"api-proxy/internal/config"
 	"api-proxy/internal/repository"
 	"context"
@@ -55,7 +56,7 @@ func (server *Server) Start() error {
 	r.Post("/api/v1/admin/oauth/token", authHandler.handleInternalOAuth)
 
 	r.Route("/api/v1/admin", func(r chi.Router) {
-		//r.Use(middleware.AdminAuth(server.adminJwtSigningSecret))
+		r.Use(middleware.AdminAuth(server.adminJwtSigningSecret))
 
 		r.Mount("/users", internalUserHandler.Router())
 		r.Mount("/orgs", orgHandler.Router())

@@ -3,7 +3,6 @@ package api
 import (
 	"api-proxy/internal/model"
 	"api-proxy/internal/repository"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -81,7 +80,6 @@ func (iuh *InternalUserHandler) handleCreateInternalUser(w http.ResponseWriter, 
 		return
 	}
 
-	log.Print(user.Password)
 	hashedSecret, err := hashSecret(user.Password)
 
 	if err != nil {

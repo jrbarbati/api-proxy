@@ -4,16 +4,19 @@ import (
 	"api-proxy/internal/model"
 	"database/sql"
 	"errors"
+	"time"
 )
 
 const (
-	findActiveRoutes   = "SELECT id, pattern, backend_url, method, created_at, updated_at, inactivated_at FROM route where inactivated_at is null"
-	patternWhereClause = " AND pattern = ?"
-	methodWhereClause  = " AND method = ?"
-	findRouteByID      = "SELECT id, pattern, backend_url, method, created_at, updated_at, inactivated_at FROM route where id = ?"
-	insertRoute        = "INSERT INTO route (pattern, backend_url, method, updated_at, inactivated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP(6), null)"
-	updateRoute        = "UPDATE route SET backend_url = ?, method = ?, updated_at = CURRENT_TIMESTAMP(6), inactivated_at = ? WHERE id = ?"
-	deleteRoute        = "DELETE FROM route WHERE id = ?"
+	findActiveRoutes         = "SELECT id, pattern, backend_url, method, created_at, updated_at, inactivated_at FROM route where inactivated_at is null"
+	patternWhereClause       = " AND pattern = ?"
+	methodWhereClause        = " AND method = ?"
+	updatedAfterWhereClause  = " AND updated_at > ?"
+	updatedBeforeWhereClause = " AND updated_at < ?"
+	findRouteByID            = "SELECT id, pattern, backend_url, method, created_at, updated_at, inactivated_at FROM route where id = ?"
+	insertRoute              = "INSERT INTO route (pattern, backend_url, method, updated_at, inactivated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP(6), null)"
+	updateRoute              = "UPDATE route SET backend_url = ?, method = ?, updated_at = CURRENT_TIMESTAMP(6), inactivated_at = ? WHERE id = ?"
+	deleteRoute              = "DELETE FROM route WHERE id = ?"
 )
 
 // RouteRepository represents an object through which Route queries can be run
@@ -22,8 +25,10 @@ type RouteRepository struct {
 }
 
 type RouteFilter struct {
-	Pattern string
-	Method  string
+	Pattern       string
+	Method        string
+	UpdatedAfter  *time.Time
+	UpdatedBefore *time.Time
 }
 
 func NewRouteRepository(db *sql.DB) *RouteRepository {
@@ -35,14 +40,24 @@ func (rr *RouteRepository) FindActiveByFilter(filter *RouteFilter) ([]*model.Rou
 	var args []any
 	query := findActiveRoutes
 
-	if filter.Pattern != "" {
+	if filter != nil && filter.Pattern != "" {
 		query += patternWhereClause
 		args = append(args, filter.Pattern)
 	}
 
-	if filter.Method != "" {
+	if filter != nil && filter.Method != "" {
 		query += methodWhereClause
 		args = append(args, filter.Method)
+	}
+
+	if filter != nil && filter.UpdatedAfter != nil {
+		query += updatedAfterWhereClause
+		args = append(args, filter.UpdatedAfter)
+	}
+
+	if filter != nil && filter.UpdatedBefore != nil {
+		query += updatedBeforeWhereClause
+		args = append(args, filter.UpdatedBefore)
 	}
 
 	return rr.findRoutes(query, args...)

@@ -2,7 +2,9 @@ package api
 
 import (
 	"api-proxy/internal/api/middleware"
+	"api-proxy/internal/cache"
 	"api-proxy/internal/config"
+	"api-proxy/internal/model"
 	"api-proxy/internal/repository"
 	"context"
 	"database/sql"
@@ -22,6 +24,7 @@ type Server struct {
 	jwtSigningSecret      string
 	adminJwtSigningSecret string
 	port                  string
+	routeCacheTTL         string
 	db                    *sql.DB
 }
 
@@ -42,15 +45,14 @@ func NewServer(
 func (server *Server) Start() error {
 	r := chi.NewRouter()
 
-	sar := repository.NewServiceAccountRepository(server.db)
 	iur := repository.NewInternalUserRepository(server.db)
+	or := repository.NewOrgRepository(server.db)
+	rlr := repository.NewRateLimitRepository(server.db)
+	rr := repository.NewRouteRepository(server.db)
+	rc := cache.NewRouteCache()
+	sar := repository.NewServiceAccountRepository(server.db)
 
 	authHandler := NewAuthHandler(server.jwtSigningSecret, server.adminJwtSigningSecret, sar, iur)
-	internalUserHandler := NewInternalUserHandler(iur)
-	orgHandler := NewOrgHandler(repository.NewOrgRepository(server.db))
-	rateLimitHandler := NewRateLimitHandler(repository.NewRateLimitRepository(server.db))
-	routeHandler := NewRouteHandler(repository.NewRouteRepository(server.db))
-	serviceAccountHandler := NewServiceAccountHandler(sar)
 
 	r.Post("/api/v1/oauth/token", authHandler.handleOAuth)
 	r.Post("/api/v1/admin/oauth/token", authHandler.handleInternalOAuth)
@@ -58,16 +60,24 @@ func (server *Server) Start() error {
 	r.Route("/api/v1/admin", func(r chi.Router) {
 		r.Use(middleware.AdminAuth(server.adminJwtSigningSecret))
 
-		r.Mount("/users", internalUserHandler.Router())
-		r.Mount("/orgs", orgHandler.Router())
-		r.Mount("/rate-limits", rateLimitHandler.Router())
-		r.Mount("/routes", routeHandler.Router())
-		r.Mount("/service-accounts", serviceAccountHandler.Router())
+		r.Mount("/users", NewInternalUserHandler(iur).Router())
+		r.Mount("/orgs", NewOrgHandler(or).Router())
+		r.Mount("/rate-limits", NewRateLimitHandler(rlr).Router())
+		r.Mount("/routes", NewRouteHandler(rr).Router())
+		r.Mount("/service-accounts", NewServiceAccountHandler(sar).Router())
 	})
+
+	r.With(
+		middleware.ExternalAuth(server.jwtSigningSecret),
+		middleware.ResolveRoute(rc),
+	).Handle("/*", NewProxyHandler())
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
+	rc.StartSync(ctx, 2*time.Minute, func() ([]*model.Route, error) { // TODO: Do some benchmarking on rr.FindActiveByFilter and/or the syncCache() method and adjust the interval accordingly
+		return rr.FindActiveByFilter(nil)
+	})
 	httpServer := server.listenAndServe(r)
 
 	<-ctx.Done()

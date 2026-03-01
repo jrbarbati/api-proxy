@@ -92,6 +92,9 @@ func (r *RouteCache) StartSync(ctx context.Context, interval time.Duration, find
 }
 
 func (r *RouteCache) syncCache(findRoutes func() ([]*model.Route, error)) {
+	log.Println("start sync cache...")
+	defer log.Println("end sync cache...")
+
 	routes, err := findRoutes()
 
 	if err != nil {

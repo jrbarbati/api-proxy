@@ -9,13 +9,32 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func (server *Server) handleGetRoutes(w http.ResponseWriter, r *http.Request) {
+type RouteHandler struct {
+	repository *repository.RouteRepository
+}
+
+func NewRouteHandler(repository *repository.RouteRepository) *RouteHandler {
+	return &RouteHandler{repository: repository}
+}
+
+func (rh *RouteHandler) Router() http.Handler {
+	r := chi.NewRouter()
+
+	r.Get("/", rh.handleGetRoutes)
+	r.Get("/{id}", rh.handleGetRoute)
+	r.Post("/", rh.handleCreateRoute)
+	r.Put("/{id}", rh.handleUpdateRoute)
+
+	return r
+}
+
+func (rh *RouteHandler) handleGetRoutes(w http.ResponseWriter, r *http.Request) {
 	filter := &repository.RouteFilter{
 		Pattern: r.URL.Query().Get("pattern"),
 		Method:  r.URL.Query().Get("method"),
 	}
 
-	active, err := server.routeRepository.FindActiveByFilter(filter)
+	active, err := rh.repository.FindActiveByFilter(filter)
 
 	if err != nil {
 		http.Error(w, "unexpected error.", http.StatusInternalServerError)
@@ -25,7 +44,7 @@ func (server *Server) handleGetRoutes(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, active, http.StatusOK)
 }
 
-func (server *Server) handleGetRoute(w http.ResponseWriter, r *http.Request) {
+func (rh *RouteHandler) handleGetRoute(w http.ResponseWriter, r *http.Request) {
 	uriId, strconvErr := strconv.Atoi(chi.URLParam(r, "id"))
 
 	if strconvErr != nil {
@@ -33,7 +52,7 @@ func (server *Server) handleGetRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	route, err := server.routeRepository.FindByID(uriId)
+	route, err := rh.repository.FindByID(uriId)
 
 	if err != nil {
 		http.Error(w, "unexpected error.", http.StatusInternalServerError)
@@ -48,7 +67,7 @@ func (server *Server) handleGetRoute(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, route, http.StatusOK)
 }
 
-func (server *Server) handleCreateRoute(w http.ResponseWriter, r *http.Request) {
+func (rh *RouteHandler) handleCreateRoute(w http.ResponseWriter, r *http.Request) {
 	route, err := decodeJSON[model.Route](r)
 
 	if err != nil {
@@ -56,7 +75,7 @@ func (server *Server) handleCreateRoute(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	created, err := server.routeRepository.Insert(route)
+	created, err := rh.repository.Insert(route)
 
 	if err != nil {
 		http.Error(w, "unexpected error", http.StatusInternalServerError)
@@ -66,7 +85,7 @@ func (server *Server) handleCreateRoute(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, created, http.StatusCreated)
 }
 
-func (server *Server) handleUpdateRoute(w http.ResponseWriter, r *http.Request) {
+func (rh *RouteHandler) handleUpdateRoute(w http.ResponseWriter, r *http.Request) {
 	uriId, strconvErr := strconv.Atoi(chi.URLParam(r, "id"))
 
 	if strconvErr != nil {
@@ -86,7 +105,7 @@ func (server *Server) handleUpdateRoute(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	updated, err := server.routeRepository.Update(route)
+	updated, err := rh.repository.Update(route)
 
 	if err != nil {
 		http.Error(w, "unexpected error", http.StatusInternalServerError)

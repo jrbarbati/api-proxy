@@ -9,13 +9,32 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func (server *Server) handleGetRateLimits(w http.ResponseWriter, r *http.Request) {
+type RateLimitHandler struct {
+	repository *repository.RateLimitRepository
+}
+
+func NewRateLimitHandler(repository *repository.RateLimitRepository) *RateLimitHandler {
+	return &RateLimitHandler{repository: repository}
+}
+
+func (rlh *RateLimitHandler) Router() http.Handler {
+	r := chi.NewRouter()
+
+	r.Get("/", rlh.handleGetRateLimits)
+	r.Get("/{id}", rlh.handleGetRateLimit)
+	r.Post("/", rlh.handleCreateRateLimit)
+	r.Put("/{id}", rlh.handleUpdateRateLimit)
+
+	return r
+}
+
+func (rlh *RateLimitHandler) handleGetRateLimits(w http.ResponseWriter, r *http.Request) {
 	filter := &repository.RateLimitFilter{
 		OrgId:            r.URL.Query().Get("orgId"),
 		ServiceAccountId: r.URL.Query().Get("serviceAccountId"),
 	}
 
-	active, err := server.rateLimitRepository.FindActiveByFilter(filter)
+	active, err := rlh.repository.FindActiveByFilter(filter)
 
 	if err != nil {
 		http.Error(w, "unexpected error.", http.StatusInternalServerError)
@@ -25,7 +44,7 @@ func (server *Server) handleGetRateLimits(w http.ResponseWriter, r *http.Request
 	writeJSON(w, active, http.StatusOK)
 }
 
-func (server *Server) handleGetRateLimit(w http.ResponseWriter, r *http.Request) {
+func (rlh *RateLimitHandler) handleGetRateLimit(w http.ResponseWriter, r *http.Request) {
 	uriId, strconvErr := strconv.Atoi(chi.URLParam(r, "id"))
 
 	if strconvErr != nil {
@@ -33,7 +52,7 @@ func (server *Server) handleGetRateLimit(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	route, err := server.rateLimitRepository.FindByID(uriId)
+	route, err := rlh.repository.FindByID(uriId)
 
 	if err != nil {
 		http.Error(w, "unexpected error.", http.StatusInternalServerError)
@@ -48,7 +67,7 @@ func (server *Server) handleGetRateLimit(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, route, http.StatusOK)
 }
 
-func (server *Server) handleCreateRateLimit(w http.ResponseWriter, r *http.Request) {
+func (rlh *RateLimitHandler) handleCreateRateLimit(w http.ResponseWriter, r *http.Request) {
 	route, err := decodeJSON[model.RateLimit](r)
 
 	if err != nil {
@@ -56,7 +75,7 @@ func (server *Server) handleCreateRateLimit(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	created, err := server.rateLimitRepository.Insert(route)
+	created, err := rlh.repository.Insert(route)
 
 	if err != nil {
 		http.Error(w, "unexpected error", http.StatusInternalServerError)
@@ -66,7 +85,7 @@ func (server *Server) handleCreateRateLimit(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, created, http.StatusCreated)
 }
 
-func (server *Server) handleUpdateRateLimit(w http.ResponseWriter, r *http.Request) {
+func (rlh *RateLimitHandler) handleUpdateRateLimit(w http.ResponseWriter, r *http.Request) {
 	uriId, strconvErr := strconv.Atoi(chi.URLParam(r, "id"))
 
 	if strconvErr != nil {
@@ -86,7 +105,7 @@ func (server *Server) handleUpdateRateLimit(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	updated, err := server.rateLimitRepository.Update(route)
+	updated, err := rlh.repository.Update(route)
 
 	if err != nil {
 		http.Error(w, "unexpected error", http.StatusInternalServerError)

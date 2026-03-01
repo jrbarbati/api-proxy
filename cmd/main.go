@@ -4,7 +4,6 @@ import (
 	"api-proxy/internal/api"
 	"api-proxy/internal/config"
 	"api-proxy/internal/db"
-	"api-proxy/internal/repository"
 	"log"
 )
 
@@ -25,14 +24,7 @@ func main() {
 		log.Fatalf("Unable to run migrations: %v\n", migrationErr)
 	}
 
-	server := api.NewServer(
-		appConfig,
-		database,
-		repository.NewRouteRepository(database),
-		repository.NewOrgRepository(database),
-		repository.NewServiceAccountRepository(database),
-		repository.NewRateLimitRepository(database),
-	)
+	server := api.NewServer(appConfig, database)
 
 	log.Printf("Listening on port %v", server.Port())
 	log.Fatalln(server.Start())

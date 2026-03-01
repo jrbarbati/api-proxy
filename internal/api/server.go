@@ -18,34 +18,22 @@ import (
 
 // Server represents an HTTP server with graceful shutdown support.
 type Server struct {
-	jwtSigningSecret         string
-	adminJwtSigningSecret    string
-	port                     string
-	db                       *sql.DB
-	routeRepository          *repository.RouteRepository
-	orgRepository            *repository.OrgRepository
-	serviceAccountRepository *repository.ServiceAccountRepository
-	rateLimitRepository      *repository.RateLimitRepository
+	jwtSigningSecret      string
+	adminJwtSigningSecret string
+	port                  string
+	db                    *sql.DB
 }
 
 // NewServer creates a server listening on the specified port
 func NewServer(
 	c *config.Config,
 	db *sql.DB,
-	routeRepository *repository.RouteRepository,
-	orgRepository *repository.OrgRepository,
-	serviceAccountRepository *repository.ServiceAccountRepository,
-	rateLimitRepository *repository.RateLimitRepository,
 ) *Server {
 	return &Server{
-		port:                     c.Server.Port,
-		jwtSigningSecret:         c.JWTConfig.SigningSecret,
-		adminJwtSigningSecret:    c.JWTConfig.Admin.SigningSecret,
-		db:                       db,
-		routeRepository:          routeRepository,
-		orgRepository:            orgRepository,
-		serviceAccountRepository: serviceAccountRepository,
-		rateLimitRepository:      rateLimitRepository,
+		port:                  c.Server.Port,
+		jwtSigningSecret:      c.JWTConfig.SigningSecret,
+		adminJwtSigningSecret: c.JWTConfig.Admin.SigningSecret,
+		db:                    db,
 	}
 }
 
@@ -53,44 +41,27 @@ func NewServer(
 func (server *Server) Start() error {
 	r := chi.NewRouter()
 
-	r.Route("/api/v1/oauth/token", func(r chi.Router) {
-		r.Post("/", server.handleOAuth)
-	})
+	sar := repository.NewServiceAccountRepository(server.db)
+	iur := repository.NewInternalUserRepository(server.db)
+
+	authHandler := NewAuthHandler(server.jwtSigningSecret, server.adminJwtSigningSecret, sar, iur)
+	internalUserHandler := NewInternalUserHandler(iur)
+	orgHandler := NewOrgHandler(repository.NewOrgRepository(server.db))
+	rateLimitHandler := NewRateLimitHandler(repository.NewRateLimitRepository(server.db))
+	routeHandler := NewRouteHandler(repository.NewRouteRepository(server.db))
+	serviceAccountHandler := NewServiceAccountHandler(sar)
+
+	r.Post("/api/v1/oauth/token", authHandler.handleOAuth)
+	r.Post("/api/v1/admin/oauth/token", authHandler.handleInternalOAuth)
 
 	r.Route("/api/v1/admin", func(r chi.Router) {
-		r.Route("/oauth/token", func(r chi.Router) {
-			r.Post("/", func(writer http.ResponseWriter, request *http.Request) {
-				http.Error(writer, "Not implemented", http.StatusNotImplemented) // TODO: Admin Auth
-			})
-		})
+		//r.Use(middleware.AdminAuth(server.adminJwtSigningSecret))
 
-		r.Route("/routes", func(r chi.Router) {
-			r.Get("/", server.handleGetRoutes)
-			r.Get("/{id}", server.handleGetRoute)
-			r.Post("/", server.handleCreateRoute)
-			r.Put("/{id}", server.handleUpdateRoute)
-		})
-
-		r.Route("/orgs", func(r chi.Router) {
-			r.Get("/", server.handleGetOrgs)
-			r.Get("/{id}", server.handleGetOrg)
-			r.Post("/", server.handleCreateOrg)
-			r.Put("/{id}", server.handleUpdateOrg)
-		})
-
-		r.Route("/serviceAccounts", func(r chi.Router) {
-			r.Get("/", server.handleGetServiceAccounts)
-			r.Get("/{id}", server.handleGetServiceAccount)
-			r.Post("/", server.handleCreateServiceAccount)
-			r.Put("/{id}", server.handleUpdateServiceAccount)
-		})
-
-		r.Route("/rateLimits", func(r chi.Router) {
-			r.Get("/", server.handleGetRateLimits)
-			r.Get("/{id}", server.handleGetRateLimit)
-			r.Post("/", server.handleCreateRateLimit)
-			r.Put("/{id}", server.handleUpdateRateLimit)
-		})
+		r.Mount("/users", internalUserHandler.Router())
+		r.Mount("/orgs", orgHandler.Router())
+		r.Mount("/rate-limits", rateLimitHandler.Router())
+		r.Mount("/routes", routeHandler.Router())
+		r.Mount("/service-accounts", serviceAccountHandler.Router())
 	})
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

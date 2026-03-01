@@ -9,13 +9,32 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func (server *Server) handleGetServiceAccounts(w http.ResponseWriter, r *http.Request) {
+type ServiceAccountHandler struct {
+	repository *repository.ServiceAccountRepository
+}
+
+func NewServiceAccountHandler(repository *repository.ServiceAccountRepository) *ServiceAccountHandler {
+	return &ServiceAccountHandler{repository: repository}
+}
+
+func (sah *ServiceAccountHandler) Router() http.Handler {
+	r := chi.NewRouter()
+
+	r.Get("/", sah.handleGetServiceAccounts)
+	r.Get("/{id}", sah.handleGetServiceAccount)
+	r.Post("/", sah.handleCreateServiceAccount)
+	r.Put("/{id}", sah.handleUpdateServiceAccount)
+
+	return r
+}
+
+func (sah *ServiceAccountHandler) handleGetServiceAccounts(w http.ResponseWriter, r *http.Request) {
 	filter := &repository.ServiceAccountFilter{
 		Identifier: r.URL.Query().Get("identifier"),
 		ClientID:   r.URL.Query().Get("client_id"),
 	}
 
-	active, err := server.serviceAccountRepository.FindActiveByFilter(filter)
+	active, err := sah.repository.FindActiveByFilter(filter)
 
 	if err != nil {
 		http.Error(w, "unexpected error.", http.StatusInternalServerError)
@@ -25,7 +44,7 @@ func (server *Server) handleGetServiceAccounts(w http.ResponseWriter, r *http.Re
 	writeJSON(w, active, http.StatusOK)
 }
 
-func (server *Server) handleGetServiceAccount(w http.ResponseWriter, r *http.Request) {
+func (sah *ServiceAccountHandler) handleGetServiceAccount(w http.ResponseWriter, r *http.Request) {
 	uriId, strconvErr := strconv.Atoi(chi.URLParam(r, "id"))
 
 	if strconvErr != nil {
@@ -33,30 +52,39 @@ func (server *Server) handleGetServiceAccount(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	route, err := server.serviceAccountRepository.FindByID(uriId)
+	sa, err := sah.repository.FindByID(uriId)
 
 	if err != nil {
 		http.Error(w, "unexpected error.", http.StatusInternalServerError)
 		return
 	}
 
-	if route == nil {
-		http.Error(w, "route not found", http.StatusNotFound)
+	if sa == nil {
+		http.Error(w, "sa not found", http.StatusNotFound)
 		return
 	}
 
-	writeJSON(w, route, http.StatusOK)
+	writeJSON(w, sa, http.StatusOK)
 }
 
-func (server *Server) handleCreateServiceAccount(w http.ResponseWriter, r *http.Request) {
-	route, err := decodeJSON[model.ServiceAccount](r)
+func (sah *ServiceAccountHandler) handleCreateServiceAccount(w http.ResponseWriter, r *http.Request) {
+	sa, err := decodeJSON[model.ServiceAccount](r)
 
 	if err != nil {
 		http.Error(w, "unable to read json request body", http.StatusBadRequest)
 		return
 	}
 
-	created, err := server.serviceAccountRepository.Insert(route)
+	hashedSecret, err := hashSecret(sa.ClientSecret)
+
+	if err != nil {
+		http.Error(w, "unexpected error", http.StatusInternalServerError)
+		return
+	}
+
+	sa.ClientSecret = hashedSecret
+
+	created, err := sah.repository.Insert(sa)
 
 	if err != nil {
 		http.Error(w, "unexpected error", http.StatusInternalServerError)
@@ -66,7 +94,7 @@ func (server *Server) handleCreateServiceAccount(w http.ResponseWriter, r *http.
 	writeJSON(w, created, http.StatusCreated)
 }
 
-func (server *Server) handleUpdateServiceAccount(w http.ResponseWriter, r *http.Request) {
+func (sah *ServiceAccountHandler) handleUpdateServiceAccount(w http.ResponseWriter, r *http.Request) {
 	uriId, strconvErr := strconv.Atoi(chi.URLParam(r, "id"))
 
 	if strconvErr != nil {
@@ -74,19 +102,19 @@ func (server *Server) handleUpdateServiceAccount(w http.ResponseWriter, r *http.
 		return
 	}
 
-	route, err := decodeJSON[model.ServiceAccount](r)
+	sa, err := decodeJSON[model.ServiceAccount](r)
 
 	if err != nil {
 		http.Error(w, "unable to read json request body", http.StatusBadRequest)
 		return
 	}
 
-	if route.ID != uriId {
+	if sa.ID != uriId {
 		http.Error(w, "id in uri must match request body id", http.StatusBadRequest)
 		return
 	}
 
-	updated, err := server.serviceAccountRepository.Update(route)
+	updated, err := sah.repository.Update(sa)
 
 	if err != nil {
 		http.Error(w, "unexpected error", http.StatusInternalServerError)

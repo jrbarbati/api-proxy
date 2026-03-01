@@ -2,14 +2,34 @@ package api
 
 import (
 	"api-proxy/internal/model"
+	"api-proxy/internal/repository"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
 )
 
-func (server *Server) handleGetOrgs(w http.ResponseWriter, r *http.Request) {
-	active, err := server.orgRepository.FindActive()
+type OrgHandler struct {
+	repository *repository.OrgRepository
+}
+
+func NewOrgHandler(repository *repository.OrgRepository) *OrgHandler {
+	return &OrgHandler{repository: repository}
+}
+
+func (oh *OrgHandler) Router() http.Handler {
+	r := chi.NewRouter()
+
+	r.Get("/", oh.handleGetOrgs)
+	r.Get("/{id}", oh.handleGetOrg)
+	r.Post("/", oh.handleCreateOrg)
+	r.Put("/{id}", oh.handleUpdateOrg)
+
+	return r
+}
+
+func (oh *OrgHandler) handleGetOrgs(w http.ResponseWriter, r *http.Request) {
+	active, err := oh.repository.FindActive()
 
 	if err != nil {
 		http.Error(w, "unexpected error.", http.StatusInternalServerError)
@@ -19,7 +39,7 @@ func (server *Server) handleGetOrgs(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, active, http.StatusOK)
 }
 
-func (server *Server) handleGetOrg(w http.ResponseWriter, r *http.Request) {
+func (oh *OrgHandler) handleGetOrg(w http.ResponseWriter, r *http.Request) {
 	uriId, strconvErr := strconv.Atoi(chi.URLParam(r, "id"))
 
 	if strconvErr != nil {
@@ -27,7 +47,7 @@ func (server *Server) handleGetOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	route, err := server.orgRepository.FindByID(uriId)
+	route, err := oh.repository.FindByID(uriId)
 
 	if err != nil {
 		http.Error(w, "unexpected error.", http.StatusInternalServerError)
@@ -42,7 +62,7 @@ func (server *Server) handleGetOrg(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, route, http.StatusOK)
 }
 
-func (server *Server) handleCreateOrg(w http.ResponseWriter, r *http.Request) {
+func (oh *OrgHandler) handleCreateOrg(w http.ResponseWriter, r *http.Request) {
 	route, err := decodeJSON[model.Org](r)
 
 	if err != nil {
@@ -50,7 +70,7 @@ func (server *Server) handleCreateOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	created, err := server.orgRepository.Insert(route)
+	created, err := oh.repository.Insert(route)
 
 	if err != nil {
 		http.Error(w, "unexpected error", http.StatusInternalServerError)
@@ -60,7 +80,7 @@ func (server *Server) handleCreateOrg(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, created, http.StatusCreated)
 }
 
-func (server *Server) handleUpdateOrg(w http.ResponseWriter, r *http.Request) {
+func (oh *OrgHandler) handleUpdateOrg(w http.ResponseWriter, r *http.Request) {
 	uriId, strconvErr := strconv.Atoi(chi.URLParam(r, "id"))
 
 	if strconvErr != nil {
@@ -80,7 +100,7 @@ func (server *Server) handleUpdateOrg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updated, err := server.orgRepository.Update(route)
+	updated, err := oh.repository.Update(route)
 
 	if err != nil {
 		http.Error(w, "unexpected error", http.StatusInternalServerError)

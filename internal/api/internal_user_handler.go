@@ -41,7 +41,9 @@ func (iuh *InternalUserHandler) handleGetInternalUsers(w http.ResponseWriter, r 
 		return
 	}
 
-	// TODO: Scrub passwords from response body
+	for _, user := range active {
+		user.Password = ""
+	}
 
 	writeJSON(w, active, http.StatusOK)
 }
@@ -66,7 +68,7 @@ func (iuh *InternalUserHandler) handleGetInternalUser(w http.ResponseWriter, r *
 		return
 	}
 
-	// TODO: Scrub passwords from response body
+	user.Password = ""
 
 	writeJSON(w, user, http.StatusOK)
 }
@@ -96,7 +98,7 @@ func (iuh *InternalUserHandler) handleCreateInternalUser(w http.ResponseWriter, 
 		return
 	}
 
-	// TODO: Scrub passwords from response body
+	created.Password = ""
 
 	writeJSON(w, created, http.StatusCreated)
 }
@@ -128,7 +130,7 @@ func (iuh *InternalUserHandler) handleUpdateInternalUser(w http.ResponseWriter, 
 		return
 	}
 
-	// TODO: Scrub passwords from response body
+	updated.Password = ""
 
 	writeJSON(w, updated, http.StatusOK)
 }

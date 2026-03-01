@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -8,11 +9,14 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+type contextKey string
+
 const (
-	bearer = "Bearer "
+	bearer              = "Bearer "
+	orgIdKey contextKey = "org_id"
 )
 
-func HandleAuth(jwtSigningSecret, desiredTokenType string) func(http.Handler) http.Handler {
+func handleAuth(jwtSigningSecret, desiredTokenType string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token, err := extractBearerToken(r)
@@ -36,7 +40,13 @@ func HandleAuth(jwtSigningSecret, desiredTokenType string) func(http.Handler) ht
 				return
 			}
 
-			next.ServeHTTP(w, r)
+			ctx := r.Context()
+
+			if orgId, ok := claims["org_id"]; ok {
+				ctx = context.WithValue(ctx, orgIdKey, orgId)
+			}
+
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }

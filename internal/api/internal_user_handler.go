@@ -41,6 +41,8 @@ func (iuh *InternalUserHandler) handleGetInternalUsers(w http.ResponseWriter, r 
 		return
 	}
 
+	// TODO: Scrub passwords from response body
+
 	writeJSON(w, active, http.StatusOK)
 }
 
@@ -63,6 +65,8 @@ func (iuh *InternalUserHandler) handleGetInternalUser(w http.ResponseWriter, r *
 		http.Error(w, "user not found", http.StatusNotFound)
 		return
 	}
+
+	// TODO: Scrub passwords from response body
 
 	writeJSON(w, user, http.StatusOK)
 }
@@ -91,6 +95,8 @@ func (iuh *InternalUserHandler) handleCreateInternalUser(w http.ResponseWriter, 
 		http.Error(w, "unexpected error", http.StatusInternalServerError)
 		return
 	}
+
+	// TODO: Scrub passwords from response body
 
 	writeJSON(w, created, http.StatusCreated)
 }
@@ -121,6 +127,8 @@ func (iuh *InternalUserHandler) handleUpdateInternalUser(w http.ResponseWriter, 
 		http.Error(w, "unexpected error", http.StatusInternalServerError)
 		return
 	}
+
+	// TODO: Scrub passwords from response body
 
 	writeJSON(w, updated, http.StatusOK)
 }

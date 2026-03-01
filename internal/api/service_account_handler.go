@@ -41,6 +41,8 @@ func (sah *ServiceAccountHandler) handleGetServiceAccounts(w http.ResponseWriter
 		return
 	}
 
+	// TODO: Scrub client secrets from response body
+
 	writeJSON(w, active, http.StatusOK)
 }
 
@@ -63,6 +65,8 @@ func (sah *ServiceAccountHandler) handleGetServiceAccount(w http.ResponseWriter,
 		http.Error(w, "sa not found", http.StatusNotFound)
 		return
 	}
+
+	// TODO: Scrub client secrets from response body
 
 	writeJSON(w, sa, http.StatusOK)
 }
@@ -90,6 +94,8 @@ func (sah *ServiceAccountHandler) handleCreateServiceAccount(w http.ResponseWrit
 		http.Error(w, "unexpected error", http.StatusInternalServerError)
 		return
 	}
+
+	// TODO: Scrub client secrets from response body
 
 	writeJSON(w, created, http.StatusCreated)
 }
@@ -120,6 +126,8 @@ func (sah *ServiceAccountHandler) handleUpdateServiceAccount(w http.ResponseWrit
 		http.Error(w, "unexpected error", http.StatusInternalServerError)
 		return
 	}
+	
+	// TODO: Scrub client secrets from response body
 
 	writeJSON(w, updated, http.StatusOK)
 }

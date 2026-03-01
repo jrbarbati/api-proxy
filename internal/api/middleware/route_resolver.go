@@ -36,6 +36,10 @@ func ResolveRoute(rc *cache.RouteCache) func(http.Handler) http.Handler {
 	}
 }
 
+func MatchedRoute(r *http.Request) *model.Route {
+	return r.Context().Value(matchedRouteKey).(*model.Route)
+}
+
 func findRoute(routes []*model.Route, r *http.Request) (*model.Route, error) {
 	requestSegments := splitUri(r.URL.Path)
 

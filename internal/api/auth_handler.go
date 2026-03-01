@@ -56,7 +56,7 @@ func (ah *AuthHandler) handleInternalOAuth(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	ah.handleInternalCredentials(w, r, authRequest)
+	ah.handleInternalCredentials(w, authRequest)
 }
 
 func (ah *AuthHandler) handleOAuth(w http.ResponseWriter, r *http.Request) {
@@ -69,7 +69,7 @@ func (ah *AuthHandler) handleOAuth(w http.ResponseWriter, r *http.Request) {
 
 	switch authRequest.GrantType {
 	case "client_credentials":
-		ah.handleClientCredentials(w, r, authRequest)
+		ah.handleClientCredentials(w, authRequest)
 	case "kinde_token":
 		ah.handleKindeToken(w, r, authRequest)
 	default:
@@ -77,7 +77,7 @@ func (ah *AuthHandler) handleOAuth(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (ah *AuthHandler) handleInternalCredentials(w http.ResponseWriter, r *http.Request, authRequest *InternalAuthTokenRequest) {
+func (ah *AuthHandler) handleInternalCredentials(w http.ResponseWriter, authRequest *InternalAuthTokenRequest) {
 	user, err := ah.findInternalUser(authRequest.Email, authRequest.Password)
 
 	if err != nil {
@@ -100,7 +100,7 @@ func (ah *AuthHandler) handleInternalCredentials(w http.ResponseWriter, r *http.
 	writeJSON(w, accessToken, http.StatusOK)
 }
 
-func (ah *AuthHandler) handleClientCredentials(w http.ResponseWriter, r *http.Request, authRequest *AuthTokenRequest) {
+func (ah *AuthHandler) handleClientCredentials(w http.ResponseWriter, authRequest *AuthTokenRequest) {
 	account, err := ah.findServiceAccount(authRequest.ClientID, authRequest.ClientSecret)
 
 	if err != nil {

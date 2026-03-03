@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 )
 
 const (
@@ -51,9 +52,12 @@ func verifyMigrations(db *sql.DB, migrationFiles []fs.DirEntry) error {
 			continue
 		}
 
+		slog.Info("verifying migration...", "filename", file.Name())
+
 		isApplied, err := isMigrationApplied(db, file)
 
 		if err == nil && isApplied {
+			slog.Info("migration already applied, skipping.", "filename", file.Name())
 			continue
 		}
 
@@ -61,9 +65,11 @@ func verifyMigrations(db *sql.DB, migrationFiles []fs.DirEntry) error {
 			return err
 		}
 
+		slog.Info("running migration...", "filename", file.Name())
 		err = runMigration(db, file)
 
 		if err != nil {
+			slog.Error("migration failed", "filename", file.Name(), "err", err)
 			return err
 		}
 	}

@@ -3,7 +3,7 @@ package api
 import (
 	"api-proxy/internal/api/middleware"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 )
 
@@ -61,7 +61,7 @@ func writeResponse(w http.ResponseWriter, response *http.Response) error {
 	w.WriteHeader(response.StatusCode)
 
 	if _, err := w.Write(responseBody); err != nil {
-		log.Printf("error writing response body: %v", err)
+		slog.Error("error writing response body for proxied route", "error", err)
 	}
 
 	return nil

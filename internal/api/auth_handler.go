@@ -3,6 +3,7 @@ package api
 import (
 	"api-proxy/internal/model"
 	"api-proxy/internal/repository"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -52,6 +53,7 @@ func (ah *AuthHandler) handleInternalOAuth(w http.ResponseWriter, r *http.Reques
 	authRequest, err := decodeJSON[InternalAuthTokenRequest](r)
 
 	if err != nil {
+		slog.Error("error decoding request", "error", err)
 		http.Error(w, "unable to read json request body", http.StatusBadRequest)
 		return
 	}
@@ -63,6 +65,7 @@ func (ah *AuthHandler) handleOAuth(w http.ResponseWriter, r *http.Request) {
 	authRequest, err := decodeJSON[AuthTokenRequest](r)
 
 	if err != nil {
+		slog.Error("error decoding request", "error", err)
 		http.Error(w, "unable to read json request body", http.StatusBadRequest)
 		return
 	}
@@ -73,6 +76,7 @@ func (ah *AuthHandler) handleOAuth(w http.ResponseWriter, r *http.Request) {
 	case "kinde_token":
 		ah.handleKindeToken(w, r, authRequest)
 	default:
+		slog.Error("unknown grant type", "grant_type", authRequest.GrantType)
 		http.Error(w, "invalid grant type", http.StatusBadRequest)
 	}
 }
@@ -81,11 +85,13 @@ func (ah *AuthHandler) handleInternalCredentials(w http.ResponseWriter, authRequ
 	user, err := ah.findInternalUser(authRequest.Email, authRequest.Password)
 
 	if err != nil {
+		slog.Error("error finding internal user", "error", err)
 		http.Error(w, "unexpected error", http.StatusInternalServerError)
 		return
 	}
 
 	if user == nil {
+		slog.Error("internal user not found", "email", authRequest.Email)
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -93,6 +99,7 @@ func (ah *AuthHandler) handleInternalCredentials(w http.ResponseWriter, authRequ
 	accessToken, err := ah.issueTokenForUser(user)
 
 	if err != nil {
+		slog.Error("error issuing token for user", "email", authRequest.Email, "error", err)
 		http.Error(w, "unexpected error", http.StatusInternalServerError)
 		return
 	}
@@ -104,11 +111,13 @@ func (ah *AuthHandler) handleClientCredentials(w http.ResponseWriter, authReques
 	account, err := ah.findServiceAccount(authRequest.ClientID, authRequest.ClientSecret)
 
 	if err != nil {
+		slog.Error("error finding service account", "error", err)
 		http.Error(w, "unexpected error", http.StatusInternalServerError)
 		return
 	}
 
 	if account == nil {
+		slog.Error("service account not found", "client_id", authRequest.ClientID)
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -116,6 +125,7 @@ func (ah *AuthHandler) handleClientCredentials(w http.ResponseWriter, authReques
 	accessToken, err := ah.issueTokenForServiceAccount(account)
 
 	if err != nil {
+		slog.Error("error issuing token for service account", "client_id", authRequest.ClientID, "error", err)
 		http.Error(w, "unexpected error", http.StatusInternalServerError)
 		return
 	}
@@ -155,11 +165,12 @@ func (ah *AuthHandler) issueTokenForServiceAccount(serviceAccount *model.Service
 	var expiresIn = 3600
 
 	claims := jwt.MapClaims{
-		"sub":    serviceAccount.ID,
-		"org_id": serviceAccount.OrgID,
-		"type":   "external",
-		"iss":    "api-proxy",
-		"exp":    time.Now().Add(time.Duration(expiresIn) * time.Second).Unix(),
+		"sub":      serviceAccount.ID,
+		"org_id":   serviceAccount.OrgID,
+		"type":     "external",
+		"sub_type": "service-account",
+		"iss":      "api-proxy",
+		"exp":      time.Now().Add(time.Duration(expiresIn) * time.Second).Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -182,8 +193,6 @@ func (ah *AuthHandler) findInternalUser(email, password string) (*model.Internal
 	if err != nil {
 		return nil, err
 	}
-
-	// TODO: A user with the correct password is being denied here
 
 	savedSecret := "$2a$10$Zs3OyuUJSShI5qQiM/SDQuqdXBEhpfqG4h9A4gUC/StpJlVz9TUUa" // Preventing side-channel attack
 	if user != nil {

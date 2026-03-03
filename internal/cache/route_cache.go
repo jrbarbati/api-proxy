@@ -3,7 +3,7 @@ package cache
 import (
 	"api-proxy/internal/model"
 	"context"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 )
@@ -92,13 +92,12 @@ func (r *RouteCache) StartSync(ctx context.Context, interval time.Duration, find
 }
 
 func (r *RouteCache) syncCache(findRoutes func() ([]*model.Route, error)) {
-	log.Println("start sync cache...")
-	defer log.Println("end sync cache...")
+	slog.Info("started sync cache...")
 
 	routes, err := findRoutes()
 
 	if err != nil {
-		log.Print("error syncing routes from db to cache: ", err)
+		slog.Error("error syncing routes from db to cache: ", err)
 		return
 	}
 
@@ -111,4 +110,6 @@ func (r *RouteCache) syncCache(findRoutes func() ([]*model.Route, error)) {
 	r.rw.Lock()
 	defer r.rw.Unlock()
 	r.cache = nc
+
+	slog.Info("finished sync cache...", "routesAdded", len(routes))
 }

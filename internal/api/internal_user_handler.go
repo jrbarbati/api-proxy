@@ -3,6 +3,7 @@ package api
 import (
 	"api-proxy/internal/model"
 	"api-proxy/internal/repository"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -36,6 +37,7 @@ func (iuh *InternalUserHandler) handleGetInternalUsers(w http.ResponseWriter, r 
 	active, err := iuh.repository.FindActive(filter)
 
 	if err != nil {
+		slog.Error("error finding active internal users", "error", err)
 		http.Error(w, "unexpected error.", http.StatusInternalServerError)
 		return
 	}
@@ -51,6 +53,7 @@ func (iuh *InternalUserHandler) handleGetInternalUser(w http.ResponseWriter, r *
 	uriId, strconvErr := strconv.Atoi(chi.URLParam(r, "id"))
 
 	if strconvErr != nil {
+		slog.Error("error converting id to int while GETing internal user", "id", chi.URLParam(r, "id"), "error", strconvErr)
 		http.Error(w, "invalid id in the uri", http.StatusBadRequest)
 		return
 	}
@@ -58,11 +61,13 @@ func (iuh *InternalUserHandler) handleGetInternalUser(w http.ResponseWriter, r *
 	user, err := iuh.repository.FindByID(uriId)
 
 	if err != nil {
+		slog.Error("error finding internal user", "id", uriId, "error", err)
 		http.Error(w, "unexpected error.", http.StatusInternalServerError)
 		return
 	}
 
 	if user == nil {
+		slog.Error("internal user not found with id", "id", uriId)
 		http.Error(w, "user not found", http.StatusNotFound)
 		return
 	}
@@ -76,6 +81,7 @@ func (iuh *InternalUserHandler) handleCreateInternalUser(w http.ResponseWriter, 
 	user, err := decodeJSON[model.InternalUser](r)
 
 	if err != nil {
+		slog.Error("error decoding json while creating user", "error", err)
 		http.Error(w, "unable to read json request body", http.StatusBadRequest)
 		return
 	}
@@ -83,6 +89,7 @@ func (iuh *InternalUserHandler) handleCreateInternalUser(w http.ResponseWriter, 
 	hashedSecret, err := hashSecret(user.Password)
 
 	if err != nil {
+		slog.Error("error hashing password for internal user", "error", err)
 		http.Error(w, "unexpected error", http.StatusInternalServerError)
 		return
 	}
@@ -92,6 +99,7 @@ func (iuh *InternalUserHandler) handleCreateInternalUser(w http.ResponseWriter, 
 	created, err := iuh.repository.Insert(user)
 
 	if err != nil {
+		slog.Error("error inserting internal user", "error", err)
 		http.Error(w, "unexpected error", http.StatusInternalServerError)
 		return
 	}
@@ -105,6 +113,7 @@ func (iuh *InternalUserHandler) handleUpdateInternalUser(w http.ResponseWriter, 
 	uriId, strconvErr := strconv.Atoi(chi.URLParam(r, "id"))
 
 	if strconvErr != nil {
+		slog.Error("error converting id to int while PUTing internal user", "id", chi.URLParam(r, "id"), "error", strconvErr)
 		http.Error(w, "invalid id in the uri", http.StatusBadRequest)
 		return
 	}
@@ -112,11 +121,13 @@ func (iuh *InternalUserHandler) handleUpdateInternalUser(w http.ResponseWriter, 
 	user, err := decodeJSON[model.InternalUser](r)
 
 	if err != nil {
+		slog.Error("error decoding json while updating user", "error", err)
 		http.Error(w, "unable to read json request body", http.StatusBadRequest)
 		return
 	}
 
 	if user.ID != uriId {
+		slog.Error("internal user not found for update with id", "id", uriId, "user", user)
 		http.Error(w, "id in uri must match request body id", http.StatusBadRequest)
 		return
 	}
@@ -124,6 +135,7 @@ func (iuh *InternalUserHandler) handleUpdateInternalUser(w http.ResponseWriter, 
 	updated, err := iuh.repository.Update(user)
 
 	if err != nil {
+		slog.Error("error updating internal user", "error", err)
 		http.Error(w, "unexpected error", http.StatusInternalServerError)
 		return
 	}

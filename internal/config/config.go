@@ -8,12 +8,18 @@ import (
 
 const (
 	DefaultServerPort = "8080"
+	defaultLogLevel   = "INFO"
 )
 
 type Config struct {
-	Server    *ServerConfig `yaml:"server"`
-	DB        *DBConfig     `yaml:"db"`
-	JWTConfig *JWTConfig    `yaml:"jwt"`
+	Server        *ServerConfig  `yaml:"server"`
+	DB            *DBConfig      `yaml:"db"`
+	JWTConfig     *JWTConfig     `yaml:"jwt"`
+	LoggingConfig *LoggingConfig `yaml:"logging"`
+}
+
+type LoggingConfig struct {
+	Level string `yaml:"level"`
 }
 
 type ServerConfig struct {
@@ -71,6 +77,10 @@ func applyEnvOverrides(config *Config) *Config {
 		config.JWTConfig.Admin = &AdminJWTConfig{}
 	}
 
+	if config.LoggingConfig == nil {
+		config.LoggingConfig = &LoggingConfig{}
+	}
+
 	if val := os.Getenv("SERVER_PORT"); val != "" {
 		config.Server.Port = val
 	}
@@ -103,8 +113,16 @@ func applyEnvOverrides(config *Config) *Config {
 		config.JWTConfig.Admin.SigningSecret = val
 	}
 
+	if val := os.Getenv("LOG_LEVEL"); val != "" {
+		config.LoggingConfig.Level = val
+	}
+
 	if config.Server.Port == "" {
 		config.Server.Port = DefaultServerPort
+	}
+
+	if config.LoggingConfig.Level == "" {
+		config.LoggingConfig.Level = defaultLogLevel
 	}
 
 	return config

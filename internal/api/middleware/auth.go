@@ -12,8 +12,8 @@ import (
 type contextKey string
 
 const (
-	bearer              = "Bearer "
-	orgIdKey contextKey = "org_id"
+	bearer               = "Bearer "
+	claimsKey contextKey = "jwt_claims"
 )
 
 func handleAuth(jwtSigningSecret, desiredTokenType string) func(http.Handler) http.Handler {
@@ -41,14 +41,15 @@ func handleAuth(jwtSigningSecret, desiredTokenType string) func(http.Handler) ht
 			}
 
 			ctx := r.Context()
-
-			if orgId, ok := claims["org_id"]; ok {
-				ctx = context.WithValue(ctx, orgIdKey, orgId)
-			}
+			ctx = context.WithValue(ctx, claimsKey, claims)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+func Claims(r *http.Request) *jwt.MapClaims {
+	return r.Context().Value(claimsKey).(*jwt.MapClaims)
 }
 
 func extractBearerToken(r *http.Request) (string, error) {

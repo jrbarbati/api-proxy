@@ -10,7 +10,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os/signal"
 	"syscall"
@@ -68,6 +68,7 @@ func (server *Server) Start() error {
 	})
 
 	r.With(
+		middleware.LogRequest,
 		middleware.ExternalAuth(server.jwtSigningSecret),
 		middleware.ResolveRoute(rc),
 	).Handle("/*", NewProxyHandler())
@@ -92,7 +93,7 @@ func (server *Server) listenAndServe(r *chi.Mux) *http.Server {
 
 	go func() {
 		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("server error: %s\n", err)
+			slog.Error("server error", "error", err)
 		}
 	}()
 

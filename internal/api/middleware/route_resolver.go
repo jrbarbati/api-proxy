@@ -5,6 +5,7 @@ import (
 	"api-proxy/internal/model"
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strings"
 )
@@ -21,9 +22,9 @@ func ResolveRoute(rc *cache.RouteCache) func(http.Handler) http.Handler {
 			route, err := findRoute(routes, r)
 
 			if err != nil {
-				//if errors.Is(err, ErrRouteNotFound) {
-				//	// TODO: Log details for security/devops purposes
-				//}
+				if errors.Is(err, ErrRouteNotFound) {
+					slog.Warn("route not found", "route", route)
+				}
 				http.Error(w, err.Error(), http.StatusNotFound)
 				return
 			}

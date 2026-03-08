@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"strings"
 )
 
 const (
@@ -101,10 +102,18 @@ func runMigration(db *sql.DB, file fs.DirEntry) error {
 		return readFileErr
 	}
 
-	_, err := db.Exec(string(migrationScript))
+	statements := strings.Split(string(migrationScript), ";")
 
-	if err != nil {
-		return err
+	for _, statement := range statements {
+		statement = strings.TrimSpace(statement)
+
+		if statement == "" {
+			continue
+		}
+
+		if _, err := db.Exec(statement); err != nil {
+			return err
+		}
 	}
 
 	return insertNewMigration(db, file)

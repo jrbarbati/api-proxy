@@ -9,16 +9,14 @@ import (
 )
 
 type RouteCache struct {
-	rw       sync.RWMutex
-	cache    map[string]*model.Route
-	lastSync *time.Time
+	rw    sync.RWMutex
+	cache map[string]*model.Route
 }
 
 func NewRouteCache() *RouteCache {
 	return &RouteCache{
-		rw:       sync.RWMutex{},
-		cache:    newCache(0),
-		lastSync: nil,
+		rw:    sync.RWMutex{},
+		cache: newCache(0),
 	}
 }
 
@@ -92,7 +90,7 @@ func (r *RouteCache) StartSync(ctx context.Context, interval time.Duration, find
 }
 
 func (r *RouteCache) syncCache(findRoutes func() ([]*model.Route, error)) {
-	slog.Info("started sync cache...")
+	slog.Info("started route cache sync...")
 
 	routes, err := findRoutes()
 
@@ -111,5 +109,5 @@ func (r *RouteCache) syncCache(findRoutes func() ([]*model.Route, error)) {
 	defer r.rw.Unlock()
 	r.cache = nc
 
-	slog.Info("finished sync cache...", "routesAdded", len(routes))
+	slog.Info("finished route cache sync...")
 }

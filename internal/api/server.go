@@ -43,43 +43,48 @@ func NewServer(
 
 // Start spins up the server so and registers any handlers as well as provides a graceful shutdown
 func (server *Server) Start() error {
-	r := chi.NewRouter()
+	router := chi.NewRouter()
 
-	iur := repository.NewInternalUserRepository(server.db)
-	or := repository.NewOrgRepository(server.db)
-	rlr := repository.NewRateLimitRepository(server.db)
-	rr := repository.NewRouteRepository(server.db)
-	rc := cache.NewRouteCache()
-	sar := repository.NewServiceAccountRepository(server.db)
+	internalUserRepo := repository.NewInternalUserRepository(server.db)
+	orgRepo := repository.NewOrgRepository(server.db)
+	rateLimitRepo := repository.NewRateLimitRepository(server.db)
+	routeRepo := repository.NewRouteRepository(server.db)
+	routeCache := cache.NewRouteCache()
+	rateLimitCache := cache.NewRateLimitCache()
+	serviceAccountRepo := repository.NewServiceAccountRepository(server.db)
 
-	authHandler := NewAuthHandler(server.jwtSigningSecret, server.adminJwtSigningSecret, sar, iur)
+	authHandler := NewAuthHandler(server.jwtSigningSecret, server.adminJwtSigningSecret, serviceAccountRepo, internalUserRepo)
 
-	r.Post("/api/v1/oauth/token", authHandler.handleOAuth)
-	r.Post("/api/v1/admin/oauth/token", authHandler.handleInternalOAuth)
+	router.Post("/api/v1/oauth/token", authHandler.handleOAuth)
+	router.Post("/api/v1/admin/oauth/token", authHandler.handleInternalOAuth)
 
-	r.Route("/api/v1/admin", func(r chi.Router) {
+	router.Route("/api/v1/admin", func(r chi.Router) {
 		r.Use(middleware.AdminAuth(server.adminJwtSigningSecret))
 
-		r.Mount("/users", NewInternalUserHandler(iur).Router())
-		r.Mount("/orgs", NewOrgHandler(or).Router())
-		r.Mount("/rate-limits", NewRateLimitHandler(rlr).Router())
-		r.Mount("/routes", NewRouteHandler(rr).Router())
-		r.Mount("/service-accounts", NewServiceAccountHandler(sar).Router())
+		r.Mount("/users", NewInternalUserHandler(internalUserRepo).Router())
+		r.Mount("/orgs", NewOrgHandler(orgRepo).Router())
+		r.Mount("/rate-limits", NewRateLimitHandler(rateLimitRepo).Router())
+		r.Mount("/routes", NewRouteHandler(routeRepo).Router())
+		r.Mount("/service-accounts", NewServiceAccountHandler(serviceAccountRepo).Router())
 	})
 
-	r.With(
+	router.With(
 		middleware.LogRequest,
 		middleware.ExternalAuth(server.jwtSigningSecret),
-		middleware.ResolveRoute(rc),
+		middleware.RateLimit(rateLimitCache),
+		middleware.ResolveRoute(routeCache),
 	).Handle("/*", NewProxyHandler())
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	rc.StartSync(ctx, 2*time.Minute, func() ([]*model.Route, error) { // TODO: Do some benchmarking on rr.FindActiveByFilter and/or the syncCache() method and adjust the interval accordingly
-		return rr.FindActiveByFilter(nil)
+	routeCache.StartSync(ctx, 2*time.Minute, func() ([]*model.Route, error) { // TODO: Do some benchmarking on routeRepo.FindActiveByFilter and/orgRepo the syncCache() method and adjust the interval accordingly
+		return routeRepo.FindActiveByFilter(nil)
 	})
-	httpServer := server.listenAndServe(r)
+	rateLimitCache.StartSync(ctx, 5*time.Minute, func() ([]*model.RateLimit, error) {
+		return rateLimitRepo.FindActiveByFilter(nil)
+	})
+	httpServer := server.listenAndServe(router)
 
 	<-ctx.Done()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

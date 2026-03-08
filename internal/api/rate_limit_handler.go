@@ -3,6 +3,7 @@ package api
 import (
 	"api-proxy/internal/model"
 	"api-proxy/internal/repository"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -29,9 +30,18 @@ func (rlh *RateLimitHandler) Router() http.Handler {
 }
 
 func (rlh *RateLimitHandler) handleGetRateLimits(w http.ResponseWriter, r *http.Request) {
+	orgID, orgIdParamErr := queryParam("orgId", r, toIntParam)
+	serviceAccountID, saIDParamErr := queryParam("serviceAccountId", r, toIntParam)
+
+	if orgIdParamErr != nil || saIDParamErr != nil {
+		slog.Error("either orgId or serviceAccountId was invalid", "org_id", orgIdParamErr, "service_account_id", saIDParamErr)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
 	filter := &repository.RateLimitFilter{
-		OrgId:            r.URL.Query().Get("orgId"),
-		ServiceAccountId: r.URL.Query().Get("serviceAccountId"),
+		OrgId:            orgID,
+		ServiceAccountId: serviceAccountID,
 	}
 
 	active, err := rlh.repository.FindActiveByFilter(filter)

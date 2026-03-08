@@ -7,12 +7,12 @@ import (
 )
 
 const (
-	findActiveRateLimits        = "SELECT id, org_id, service_account_id, limit_per_minute, limit_per_day, limit_per_month, created_at, updated_at, inactivated_at FROM rate_limit where inactivated_at is null"
+	findActiveRateLimits        = "SELECT id, org_id, service_account_id, limit_per_minute, created_at, updated_at, inactivated_at FROM rate_limit where inactivated_at is null"
 	orgIdWhereClause            = " AND org_id = ?"
 	serviceAccountIdWhereClause = " AND service_account_id = ?"
-	findRateLimitByID           = "SELECT id, org_id, service_account_id, limit_per_minute, limit_per_day, limit_per_month, created_at, updated_at, inactivated_at FROM service_account where id = ?"
-	insertRateLimit             = "INSERT INTO rate_limit (org_id, service_account_id, limit_per_minute, limit_per_day, limit_per_month, updated_at, inactivated_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP(6), null)"
-	updateRateLimit             = "UPDATE rate_limit SET service_account_id = ?, limit_per_minute = ?, limit_per_day = ?, limit_per_month = ?, updated_at = CURRENT_TIMESTAMP(6), inactivated_at = ? WHERE id = ?"
+	findRateLimitByID           = "SELECT id, org_id, service_account_id, limit_per_minute, created_at, updated_at, inactivated_at FROM rate_limit where id = ?"
+	insertRateLimit             = "INSERT INTO rate_limit (org_id, service_account_id, limit_per_minute, updated_at, inactivated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP(6), null)"
+	updateRateLimit             = "UPDATE rate_limit SET service_account_id = ?, limit_per_minute = ?, updated_at = CURRENT_TIMESTAMP(6), inactivated_at = ? WHERE id = ?"
 	deleteRateLimit             = "DELETE FROM rate_limit WHERE id = ?"
 )
 
@@ -22,8 +22,8 @@ type RateLimitRepository struct {
 }
 
 type RateLimitFilter struct {
-	OrgId            string
-	ServiceAccountId string
+	OrgId            *int
+	ServiceAccountId *int
 }
 
 func NewRateLimitRepository(db *sql.DB) *RateLimitRepository {
@@ -35,14 +35,14 @@ func (rlr *RateLimitRepository) FindActiveByFilter(filter *RateLimitFilter) ([]*
 	var args []any
 	query := findActiveRateLimits
 
-	if filter.OrgId != "" {
+	if filter != nil && filter.OrgId != nil {
 		query += orgIdWhereClause
-		args = append(args, filter.OrgId)
+		args = append(args, *filter.OrgId)
 	}
 
-	if filter.ServiceAccountId != "" {
+	if filter != nil && filter.ServiceAccountId != nil {
 		query += serviceAccountIdWhereClause
-		args = append(args, filter.ServiceAccountId)
+		args = append(args, *filter.ServiceAccountId)
 	}
 
 	return rlr.findRateLimits(query, args...)
@@ -61,8 +61,6 @@ func (rlr *RateLimitRepository) Insert(rateLimit *model.RateLimit) (*model.RateL
 		rateLimit.OrgID,
 		rateLimit.ServiceAccountID,
 		rateLimit.LimitPerMinute,
-		rateLimit.LimitPerDay,
-		rateLimit.LimitPerMonth,
 	)
 
 	if err != nil {
@@ -80,8 +78,6 @@ func (rlr *RateLimitRepository) Update(rateLimit *model.RateLimit) (*model.RateL
 		updateRateLimit,
 		rateLimit.ServiceAccountID,
 		rateLimit.LimitPerMinute,
-		rateLimit.LimitPerDay,
-		rateLimit.LimitPerMonth,
 		rateLimit.InactivatedAt,
 		rateLimit.ID,
 	)
@@ -117,8 +113,6 @@ func (rlr *RateLimitRepository) findRateLimits(query string, args ...any) ([]*mo
 			&rateLimit.OrgID,
 			&rateLimit.ServiceAccountID,
 			&rateLimit.LimitPerMinute,
-			&rateLimit.LimitPerDay,
-			&rateLimit.LimitPerMonth,
 			&rateLimit.CreatedAt,
 			&rateLimit.UpdatedAt,
 			&rateLimit.InactivatedAt,
@@ -147,7 +141,6 @@ func (rlr *RateLimitRepository) findRateLimit(query string, args ...any) (*model
 		&rateLimit.OrgID,
 		&rateLimit.ServiceAccountID,
 		&rateLimit.LimitPerMinute,
-		&rateLimit.LimitPerDay,
 		&rateLimit.CreatedAt,
 		&rateLimit.UpdatedAt,
 		&rateLimit.InactivatedAt,

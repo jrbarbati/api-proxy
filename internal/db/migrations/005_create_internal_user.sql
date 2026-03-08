@@ -8,4 +8,4 @@ CREATE TABLE IF NOT EXISTS internal_user (
 
     PRIMARY KEY (id),
     CONSTRAINT uq_email UNIQUE (email)
-)
+);

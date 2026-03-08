@@ -21,17 +21,12 @@ type RateLimitRepository struct {
 	db *sql.DB
 }
 
-type RateLimitFilter struct {
-	OrgId            *int
-	ServiceAccountId *int
-}
-
 func NewRateLimitRepository(db *sql.DB) *RateLimitRepository {
 	return &RateLimitRepository{db: db}
 }
 
 // FindActiveByFilter queries rate limits from the database using the specified filters
-func (rlr *RateLimitRepository) FindActiveByFilter(filter *RateLimitFilter) ([]*model.RateLimit, error) {
+func (rlr *RateLimitRepository) FindActiveByFilter(filter *model.RateLimitFilter) ([]*model.RateLimit, error) {
 	var args []any
 	query := findActiveRateLimits
 

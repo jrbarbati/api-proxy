@@ -2,19 +2,25 @@ package api
 
 import (
 	"api-proxy/internal/model"
-	"api-proxy/internal/repository"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
 )
 
-type RouteHandler struct {
-	repository *repository.RouteRepository
+type RouteDataStore interface {
+	FindActiveByFilter(filter *model.RouteFilter) ([]*model.Route, error)
+	FindByID(id int) (*model.Route, error)
+	Insert(route *model.Route) (*model.Route, error)
+	Update(route *model.Route) (*model.Route, error)
 }
 
-func NewRouteHandler(repository *repository.RouteRepository) *RouteHandler {
-	return &RouteHandler{repository: repository}
+type RouteHandler struct {
+	dataStore RouteDataStore
+}
+
+func NewRouteHandler(routeDataStore RouteDataStore) *RouteHandler {
+	return &RouteHandler{dataStore: routeDataStore}
 }
 
 func (rh *RouteHandler) Router() http.Handler {
@@ -29,12 +35,12 @@ func (rh *RouteHandler) Router() http.Handler {
 }
 
 func (rh *RouteHandler) handleGetRoutes(w http.ResponseWriter, r *http.Request) {
-	filter := &repository.RouteFilter{
+	filter := &model.RouteFilter{
 		Pattern: r.URL.Query().Get("pattern"),
 		Method:  r.URL.Query().Get("method"),
 	}
 
-	active, err := rh.repository.FindActiveByFilter(filter)
+	active, err := rh.dataStore.FindActiveByFilter(filter)
 
 	if err != nil {
 		http.Error(w, "unexpected error.", http.StatusInternalServerError)
@@ -52,7 +58,7 @@ func (rh *RouteHandler) handleGetRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	route, err := rh.repository.FindByID(uriId)
+	route, err := rh.dataStore.FindByID(uriId)
 
 	if err != nil {
 		http.Error(w, "unexpected error.", http.StatusInternalServerError)
@@ -75,7 +81,7 @@ func (rh *RouteHandler) handleCreateRoute(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	created, err := rh.repository.Insert(route)
+	created, err := rh.dataStore.Insert(route)
 
 	if err != nil {
 		http.Error(w, "unexpected error", http.StatusInternalServerError)
@@ -105,7 +111,7 @@ func (rh *RouteHandler) handleUpdateRoute(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	updated, err := rh.repository.Update(route)
+	updated, err := rh.dataStore.Update(route)
 
 	if err != nil {
 		http.Error(w, "unexpected error", http.StatusInternalServerError)

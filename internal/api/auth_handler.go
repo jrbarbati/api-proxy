@@ -2,7 +2,6 @@ package api
 
 import (
 	"api-proxy/internal/model"
-	"api-proxy/internal/repository"
 	"log/slog"
 	"net/http"
 	"time"
@@ -10,6 +9,14 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
+
+type AuthServiceAccountDataStore interface {
+	FindByClientID(clientID string) (*model.ServiceAccount, error)
+}
+
+type AuthInternalUserDataStore interface {
+	FindByEmail(email string) (*model.InternalUser, error)
+}
 
 type AuthTokenRequest struct {
 	GrantType    string `json:"grant_type"`
@@ -29,23 +36,23 @@ type AccessToken struct {
 }
 
 type AuthHandler struct {
-	jwtSigningSecret         string
-	adminJwtSigningSecret    string
-	serviceAccountRepository *repository.ServiceAccountRepository
-	internalUserRepository   *repository.InternalUserRepository
+	jwtSigningSecret        string
+	adminJwtSigningSecret   string
+	serviceAccountDataStore AuthServiceAccountDataStore
+	internalUserDataStore   AuthInternalUserDataStore
 }
 
 func NewAuthHandler(
 	jwtSigningSecret string,
 	adminJwtSigningSecret string,
-	serviceAccountRepository *repository.ServiceAccountRepository,
-	internalUserRepository *repository.InternalUserRepository,
+	authServiceAccountDataStore AuthServiceAccountDataStore,
+	authInternalUserDataStore AuthInternalUserDataStore,
 ) *AuthHandler {
 	return &AuthHandler{
-		jwtSigningSecret:         jwtSigningSecret,
-		adminJwtSigningSecret:    adminJwtSigningSecret,
-		serviceAccountRepository: serviceAccountRepository,
-		internalUserRepository:   internalUserRepository,
+		jwtSigningSecret:        jwtSigningSecret,
+		adminJwtSigningSecret:   adminJwtSigningSecret,
+		serviceAccountDataStore: authServiceAccountDataStore,
+		internalUserDataStore:   authInternalUserDataStore,
 	}
 }
 
@@ -188,7 +195,7 @@ func (ah *AuthHandler) issueTokenForServiceAccount(serviceAccount *model.Service
 }
 
 func (ah *AuthHandler) findInternalUser(email, password string) (*model.InternalUser, error) {
-	user, err := ah.internalUserRepository.FindByEmail(email)
+	user, err := ah.internalUserDataStore.FindByEmail(email)
 
 	if err != nil {
 		return nil, err
@@ -207,7 +214,7 @@ func (ah *AuthHandler) findInternalUser(email, password string) (*model.Internal
 }
 
 func (ah *AuthHandler) findServiceAccount(clientId, clientSecret string) (*model.ServiceAccount, error) {
-	account, err := ah.serviceAccountRepository.FindByClientID(clientId)
+	account, err := ah.serviceAccountDataStore.FindByClientID(clientId)
 
 	if err != nil {
 		return nil, err

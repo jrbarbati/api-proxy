@@ -2,7 +2,6 @@ package api
 
 import (
 	"api-proxy/internal/model"
-	"api-proxy/internal/repository"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -10,12 +9,19 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type RateLimitHandler struct {
-	repository *repository.RateLimitRepository
+type RateLimitDataStore interface {
+	FindActiveByFilter(filter *model.RateLimitFilter) ([]*model.RateLimit, error)
+	FindByID(id int) (*model.RateLimit, error)
+	Insert(rateLimit *model.RateLimit) (*model.RateLimit, error)
+	Update(rateLimit *model.RateLimit) (*model.RateLimit, error)
 }
 
-func NewRateLimitHandler(repository *repository.RateLimitRepository) *RateLimitHandler {
-	return &RateLimitHandler{repository: repository}
+type RateLimitHandler struct {
+	dataStore RateLimitDataStore
+}
+
+func NewRateLimitHandler(rateLimitDataStore RateLimitDataStore) *RateLimitHandler {
+	return &RateLimitHandler{dataStore: rateLimitDataStore}
 }
 
 func (rlh *RateLimitHandler) Router() http.Handler {
@@ -39,12 +45,12 @@ func (rlh *RateLimitHandler) handleGetRateLimits(w http.ResponseWriter, r *http.
 		return
 	}
 
-	filter := &repository.RateLimitFilter{
+	filter := &model.RateLimitFilter{
 		OrgId:            orgID,
 		ServiceAccountId: serviceAccountID,
 	}
 
-	active, err := rlh.repository.FindActiveByFilter(filter)
+	active, err := rlh.dataStore.FindActiveByFilter(filter)
 
 	if err != nil {
 		http.Error(w, "unexpected error.", http.StatusInternalServerError)
@@ -62,30 +68,30 @@ func (rlh *RateLimitHandler) handleGetRateLimit(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	route, err := rlh.repository.FindByID(uriId)
+	rateLimit, err := rlh.dataStore.FindByID(uriId)
 
 	if err != nil {
 		http.Error(w, "unexpected error.", http.StatusInternalServerError)
 		return
 	}
 
-	if route == nil {
+	if rateLimit == nil {
 		http.Error(w, "rate limit not found", http.StatusNotFound)
 		return
 	}
 
-	writeJSON(w, route, http.StatusOK)
+	writeJSON(w, rateLimit, http.StatusOK)
 }
 
 func (rlh *RateLimitHandler) handleCreateRateLimit(w http.ResponseWriter, r *http.Request) {
-	route, err := decodeJSON[model.RateLimit](r)
+	rateLimit, err := decodeJSON[model.RateLimit](r)
 
 	if err != nil {
 		http.Error(w, "unable to read json request body", http.StatusBadRequest)
 		return
 	}
 
-	created, err := rlh.repository.Insert(route)
+	created, err := rlh.dataStore.Insert(rateLimit)
 
 	if err != nil {
 		http.Error(w, "unexpected error", http.StatusInternalServerError)
@@ -103,19 +109,19 @@ func (rlh *RateLimitHandler) handleUpdateRateLimit(w http.ResponseWriter, r *htt
 		return
 	}
 
-	route, err := decodeJSON[model.RateLimit](r)
+	rateLimit, err := decodeJSON[model.RateLimit](r)
 
 	if err != nil {
 		http.Error(w, "unable to read json request body", http.StatusBadRequest)
 		return
 	}
 
-	if route.ID != uriId {
+	if rateLimit.ID != uriId {
 		http.Error(w, "id in uri must match request body id", http.StatusBadRequest)
 		return
 	}
 
-	updated, err := rlh.repository.Update(route)
+	updated, err := rlh.dataStore.Update(rateLimit)
 
 	if err != nil {
 		http.Error(w, "unexpected error", http.StatusInternalServerError)

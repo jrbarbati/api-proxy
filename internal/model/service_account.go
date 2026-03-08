@@ -12,3 +12,8 @@ type ServiceAccount struct {
 	UpdatedAt     *time.Time `json:"updated_at"`
 	InactivatedAt *time.Time `json:"inactivated_at"`
 }
+
+type ServiceAccountFilter struct {
+	Identifier string
+	ClientID   string
+}

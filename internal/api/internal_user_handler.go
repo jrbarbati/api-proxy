@@ -2,7 +2,6 @@ package api
 
 import (
 	"api-proxy/internal/model"
-	"api-proxy/internal/repository"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -10,12 +9,19 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type InternalUserHandler struct {
-	repository *repository.InternalUserRepository
+type InternalUserDataStore interface {
+	FindActiveByFilter(filter *model.InternalUserFilter) ([]*model.InternalUser, error)
+	FindByID(id int) (*model.InternalUser, error)
+	Insert(user *model.InternalUser) (*model.InternalUser, error)
+	Update(user *model.InternalUser) (*model.InternalUser, error)
 }
 
-func NewInternalUserHandler(repository *repository.InternalUserRepository) *InternalUserHandler {
-	return &InternalUserHandler{repository: repository}
+type InternalUserHandler struct {
+	dataStore InternalUserDataStore
+}
+
+func NewInternalUserHandler(internalUserDataStore InternalUserDataStore) *InternalUserHandler {
+	return &InternalUserHandler{dataStore: internalUserDataStore}
 }
 
 func (iuh *InternalUserHandler) Router() http.Handler {
@@ -30,11 +36,11 @@ func (iuh *InternalUserHandler) Router() http.Handler {
 }
 
 func (iuh *InternalUserHandler) handleGetInternalUsers(w http.ResponseWriter, r *http.Request) {
-	filter := &repository.InternalUserFilter{
+	filter := &model.InternalUserFilter{
 		Email: r.URL.Query().Get("email"),
 	}
 
-	active, err := iuh.repository.FindActive(filter)
+	active, err := iuh.dataStore.FindActiveByFilter(filter)
 
 	if err != nil {
 		slog.Error("error finding active internal users", "error", err)
@@ -58,7 +64,7 @@ func (iuh *InternalUserHandler) handleGetInternalUser(w http.ResponseWriter, r *
 		return
 	}
 
-	user, err := iuh.repository.FindByID(uriId)
+	user, err := iuh.dataStore.FindByID(uriId)
 
 	if err != nil {
 		slog.Error("error finding internal user", "id", uriId, "error", err)
@@ -96,7 +102,7 @@ func (iuh *InternalUserHandler) handleCreateInternalUser(w http.ResponseWriter, 
 
 	user.Password = hashedSecret
 
-	created, err := iuh.repository.Insert(user)
+	created, err := iuh.dataStore.Insert(user)
 
 	if err != nil {
 		slog.Error("error inserting internal user", "error", err)
@@ -132,7 +138,7 @@ func (iuh *InternalUserHandler) handleUpdateInternalUser(w http.ResponseWriter, 
 		return
 	}
 
-	updated, err := iuh.repository.Update(user)
+	updated, err := iuh.dataStore.Update(user)
 
 	if err != nil {
 		slog.Error("error updating internal user", "error", err)

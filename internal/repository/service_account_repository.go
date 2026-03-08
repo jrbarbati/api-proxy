@@ -22,17 +22,12 @@ type ServiceAccountRepository struct {
 	db *sql.DB
 }
 
-type ServiceAccountFilter struct {
-	Identifier string
-	ClientID   string
-}
-
 func NewServiceAccountRepository(db *sql.DB) *ServiceAccountRepository {
 	return &ServiceAccountRepository{db: db}
 }
 
 // FindActiveByFilter queries service accounts from the DB using the specified filters
-func (sar *ServiceAccountRepository) FindActiveByFilter(filter *ServiceAccountFilter) ([]*model.ServiceAccount, error) {
+func (sar *ServiceAccountRepository) FindActiveByFilter(filter *model.ServiceAccountFilter) ([]*model.ServiceAccount, error) {
 	var args []any
 	query := findActiveServiceAccounts
 

@@ -2,19 +2,25 @@ package api
 
 import (
 	"api-proxy/internal/model"
-	"api-proxy/internal/repository"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
 )
 
-type ServiceAccountHandler struct {
-	repository *repository.ServiceAccountRepository
+type ServiceAccountDataStore interface {
+	FindActiveByFilter(filter *model.ServiceAccountFilter) ([]*model.ServiceAccount, error)
+	FindByID(id int) (*model.ServiceAccount, error)
+	Insert(sa *model.ServiceAccount) (*model.ServiceAccount, error)
+	Update(sa *model.ServiceAccount) (*model.ServiceAccount, error)
 }
 
-func NewServiceAccountHandler(repository *repository.ServiceAccountRepository) *ServiceAccountHandler {
-	return &ServiceAccountHandler{repository: repository}
+type ServiceAccountHandler struct {
+	dataStore ServiceAccountDataStore
+}
+
+func NewServiceAccountHandler(serviceAccountDataStore ServiceAccountDataStore) *ServiceAccountHandler {
+	return &ServiceAccountHandler{dataStore: serviceAccountDataStore}
 }
 
 func (sah *ServiceAccountHandler) Router() http.Handler {
@@ -29,12 +35,12 @@ func (sah *ServiceAccountHandler) Router() http.Handler {
 }
 
 func (sah *ServiceAccountHandler) handleGetServiceAccounts(w http.ResponseWriter, r *http.Request) {
-	filter := &repository.ServiceAccountFilter{
+	filter := &model.ServiceAccountFilter{
 		Identifier: r.URL.Query().Get("identifier"),
 		ClientID:   r.URL.Query().Get("client_id"),
 	}
 
-	active, err := sah.repository.FindActiveByFilter(filter)
+	active, err := sah.dataStore.FindActiveByFilter(filter)
 
 	if err != nil {
 		http.Error(w, "unexpected error.", http.StatusInternalServerError)
@@ -56,7 +62,7 @@ func (sah *ServiceAccountHandler) handleGetServiceAccount(w http.ResponseWriter,
 		return
 	}
 
-	sa, err := sah.repository.FindByID(uriId)
+	sa, err := sah.dataStore.FindByID(uriId)
 
 	if err != nil {
 		http.Error(w, "unexpected error.", http.StatusInternalServerError)
@@ -90,7 +96,7 @@ func (sah *ServiceAccountHandler) handleCreateServiceAccount(w http.ResponseWrit
 
 	sa.ClientSecret = hashedSecret
 
-	created, err := sah.repository.Insert(sa)
+	created, err := sah.dataStore.Insert(sa)
 
 	if err != nil {
 		http.Error(w, "unexpected error", http.StatusInternalServerError)
@@ -122,7 +128,7 @@ func (sah *ServiceAccountHandler) handleUpdateServiceAccount(w http.ResponseWrit
 		return
 	}
 
-	updated, err := sah.repository.Update(sa)
+	updated, err := sah.dataStore.Update(sa)
 
 	if err != nil {
 		http.Error(w, "unexpected error", http.StatusInternalServerError)

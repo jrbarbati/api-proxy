@@ -11,3 +11,8 @@ type RateLimit struct {
 	UpdatedAt        *time.Time `json:"updated_at"`
 	InactivatedAt    *time.Time `json:"inactivated_at"`
 }
+
+type RateLimitFilter struct {
+	OrgId            *int
+	ServiceAccountId *int
+}

@@ -21,16 +21,12 @@ type InternalUserRepository struct {
 	db *sql.DB
 }
 
-type InternalUserFilter struct {
-	Email string
-}
-
 func NewInternalUserRepository(db *sql.DB) *InternalUserRepository {
 	return &InternalUserRepository{db: db}
 }
 
-// FindActive queries internalUsers from the DB using the specified filters
-func (iur *InternalUserRepository) FindActive(filter *InternalUserFilter) ([]*model.InternalUser, error) {
+// FindActiveByFilter queries internalUsers from the DB using the specified filters
+func (iur *InternalUserRepository) FindActiveByFilter(filter *model.InternalUserFilter) ([]*model.InternalUser, error) {
 	var args []any
 	query := findActiveInternalUsers
 

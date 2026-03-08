@@ -22,3 +22,10 @@ type Route struct {
 	UpdatedAt     *time.Time `json:"updated_at"`
 	InactivatedAt *time.Time `json:"inactivated_at"`
 }
+
+type RouteFilter struct {
+	Pattern       string
+	Method        string
+	UpdatedAfter  *time.Time
+	UpdatedBefore *time.Time
+}

@@ -4,7 +4,6 @@ import (
 	"api-proxy/internal/model"
 	"database/sql"
 	"errors"
-	"time"
 )
 
 const (
@@ -24,19 +23,12 @@ type RouteRepository struct {
 	db *sql.DB
 }
 
-type RouteFilter struct {
-	Pattern       string
-	Method        string
-	UpdatedAfter  *time.Time
-	UpdatedBefore *time.Time
-}
-
 func NewRouteRepository(db *sql.DB) *RouteRepository {
 	return &RouteRepository{db: db}
 }
 
 // FindActiveByFilter queries routes from the DB using the specified filters
-func (rr *RouteRepository) FindActiveByFilter(filter *RouteFilter) ([]*model.Route, error) {
+func (rr *RouteRepository) FindActiveByFilter(filter *model.RouteFilter) ([]*model.Route, error) {
 	var args []any
 	query := findActiveRoutes
 
@@ -82,7 +74,7 @@ func (rr *RouteRepository) Insert(route *model.Route) (*model.Route, error) {
 
 // Update updates an existing route in the database and returns the updated data
 func (rr *RouteRepository) Update(route *model.Route) (*model.Route, error) {
-	if err := execUpdate(rr.db, updateRoute, route.BackendURL, route.Method); err != nil {
+	if err := execUpdate(rr.db, updateRoute, route.BackendURL, route.Method, route.InactivatedAt, route.ID); err != nil {
 		return nil, err
 	}
 

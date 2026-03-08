@@ -9,7 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type RateLimitDataStore interface {
+type RateLimitDataStorer interface {
 	FindActiveByFilter(filter *model.RateLimitFilter) ([]*model.RateLimit, error)
 	FindByID(id int) (*model.RateLimit, error)
 	Insert(rateLimit *model.RateLimit) (*model.RateLimit, error)
@@ -17,10 +17,10 @@ type RateLimitDataStore interface {
 }
 
 type RateLimitHandler struct {
-	dataStore RateLimitDataStore
+	dataStore RateLimitDataStorer
 }
 
-func NewRateLimitHandler(rateLimitDataStore RateLimitDataStore) *RateLimitHandler {
+func NewRateLimitHandler(rateLimitDataStore RateLimitDataStorer) *RateLimitHandler {
 	return &RateLimitHandler{dataStore: rateLimitDataStore}
 }
 

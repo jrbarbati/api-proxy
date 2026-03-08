@@ -9,7 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type InternalUserDataStore interface {
+type InternalUserDataStorer interface {
 	FindActiveByFilter(filter *model.InternalUserFilter) ([]*model.InternalUser, error)
 	FindByID(id int) (*model.InternalUser, error)
 	Insert(user *model.InternalUser) (*model.InternalUser, error)
@@ -17,10 +17,10 @@ type InternalUserDataStore interface {
 }
 
 type InternalUserHandler struct {
-	dataStore InternalUserDataStore
+	dataStore InternalUserDataStorer
 }
 
-func NewInternalUserHandler(internalUserDataStore InternalUserDataStore) *InternalUserHandler {
+func NewInternalUserHandler(internalUserDataStore InternalUserDataStorer) *InternalUserHandler {
 	return &InternalUserHandler{dataStore: internalUserDataStore}
 }
 

@@ -31,12 +31,12 @@ func (sar *ServiceAccountRepository) FindActiveByFilter(filter *model.ServiceAcc
 	var args []any
 	query := findActiveServiceAccounts
 
-	if filter.Identifier != "" {
+	if filter != nil && filter.Identifier != "" {
 		query += identifierWhereClause
 		args = append(args, filter.Identifier)
 	}
 
-	if filter.ClientID != "" {
+	if filter != nil && filter.ClientID != "" {
 		query += clientIdWhereClause
 		args = append(args, filter.ClientID)
 	}

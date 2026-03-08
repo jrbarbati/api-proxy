@@ -8,7 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type RouteDataStore interface {
+type RouteDataStorer interface {
 	FindActiveByFilter(filter *model.RouteFilter) ([]*model.Route, error)
 	FindByID(id int) (*model.Route, error)
 	Insert(route *model.Route) (*model.Route, error)
@@ -16,10 +16,10 @@ type RouteDataStore interface {
 }
 
 type RouteHandler struct {
-	dataStore RouteDataStore
+	dataStore RouteDataStorer
 }
 
-func NewRouteHandler(routeDataStore RouteDataStore) *RouteHandler {
+func NewRouteHandler(routeDataStore RouteDataStorer) *RouteHandler {
 	return &RouteHandler{dataStore: routeDataStore}
 }
 

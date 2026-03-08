@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"api-proxy/internal/cache"
 	"api-proxy/internal/model"
 	"context"
 	"errors"
@@ -10,14 +9,18 @@ import (
 	"strings"
 )
 
+type RouteStorer interface {
+	All() []*model.Route
+}
+
 const matchedRouteKey contextKey = "matched_route"
 
 var ErrRouteNotFound = errors.New("route not found")
 
-func ResolveRoute(rc *cache.RouteCache) func(http.Handler) http.Handler {
+func ResolveRoute(routeStore RouteStorer) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			routes := rc.All()
+			routes := routeStore.All()
 
 			route, err := findRoute(routes, r)
 

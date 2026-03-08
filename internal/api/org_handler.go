@@ -8,7 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type OrgDataStore interface {
+type OrgDataStorer interface {
 	FindActive() ([]*model.Org, error)
 	FindByID(id int) (*model.Org, error)
 	Insert(org *model.Org) (*model.Org, error)
@@ -16,10 +16,10 @@ type OrgDataStore interface {
 }
 
 type OrgHandler struct {
-	dataStore OrgDataStore
+	dataStore OrgDataStorer
 }
 
-func NewOrgHandler(orgDataStore OrgDataStore) *OrgHandler {
+func NewOrgHandler(orgDataStore OrgDataStorer) *OrgHandler {
 	return &OrgHandler{dataStore: orgDataStore}
 }
 

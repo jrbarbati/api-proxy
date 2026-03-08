@@ -10,11 +10,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type AuthServiceAccountDataStore interface {
+type AuthServiceAccountDataStorer interface {
 	FindByClientID(clientID string) (*model.ServiceAccount, error)
 }
 
-type AuthInternalUserDataStore interface {
+type AuthInternalUserDataStorer interface {
 	FindByEmail(email string) (*model.InternalUser, error)
 }
 
@@ -38,15 +38,15 @@ type AccessToken struct {
 type AuthHandler struct {
 	jwtSigningSecret        string
 	adminJwtSigningSecret   string
-	serviceAccountDataStore AuthServiceAccountDataStore
-	internalUserDataStore   AuthInternalUserDataStore
+	serviceAccountDataStore AuthServiceAccountDataStorer
+	internalUserDataStore   AuthInternalUserDataStorer
 }
 
 func NewAuthHandler(
 	jwtSigningSecret string,
 	adminJwtSigningSecret string,
-	authServiceAccountDataStore AuthServiceAccountDataStore,
-	authInternalUserDataStore AuthInternalUserDataStore,
+	authServiceAccountDataStore AuthServiceAccountDataStorer,
+	authInternalUserDataStore AuthInternalUserDataStorer,
 ) *AuthHandler {
 	return &AuthHandler{
 		jwtSigningSecret:        jwtSigningSecret,

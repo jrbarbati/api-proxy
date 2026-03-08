@@ -30,7 +30,7 @@ func (iur *InternalUserRepository) FindActiveByFilter(filter *model.InternalUser
 	var args []any
 	query := findActiveInternalUsers
 
-	if filter.Email != "" {
+	if filter != nil && filter.Email != "" {
 		query += emailWhereClause
 		args = append(args, filter.Email)
 	}

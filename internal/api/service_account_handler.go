@@ -8,7 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type ServiceAccountDataStore interface {
+type ServiceAccountDataStorer interface {
 	FindActiveByFilter(filter *model.ServiceAccountFilter) ([]*model.ServiceAccount, error)
 	FindByID(id int) (*model.ServiceAccount, error)
 	Insert(sa *model.ServiceAccount) (*model.ServiceAccount, error)
@@ -16,10 +16,10 @@ type ServiceAccountDataStore interface {
 }
 
 type ServiceAccountHandler struct {
-	dataStore ServiceAccountDataStore
+	dataStore ServiceAccountDataStorer
 }
 
-func NewServiceAccountHandler(serviceAccountDataStore ServiceAccountDataStore) *ServiceAccountHandler {
+func NewServiceAccountHandler(serviceAccountDataStore ServiceAccountDataStorer) *ServiceAccountHandler {
 	return &ServiceAccountHandler{dataStore: serviceAccountDataStore}
 }
 

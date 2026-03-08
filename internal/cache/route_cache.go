@@ -20,17 +20,33 @@ func NewRouteCache() *RouteCache {
 	}
 }
 
-func (r *RouteCache) All() []*model.Route {
+func (r *RouteCache) FindActiveByFilter(filter *model.RouteFilter) ([]*model.Route, error) {
 	r.rw.RLock()
 	defer r.rw.RUnlock()
 
 	routes := make([]*model.Route, 0, len(r.cache))
 
 	for _, route := range r.cache {
+		if filter != nil && filter.Pattern != "" && filter.Pattern != route.Pattern {
+			continue
+		}
+
+		if filter != nil && filter.Method != "" && filter.Method != route.Method {
+			continue
+		}
+
+		if filter != nil && filter.UpdatedBefore != nil && route.UpdatedAt != nil && !route.UpdatedAt.Before(*filter.UpdatedBefore) {
+			continue
+		}
+
+		if filter != nil && filter.UpdatedAfter != nil && route.UpdatedAt != nil && !route.UpdatedAt.After(*filter.UpdatedAfter) {
+			continue
+		}
+
 		routes = append(routes, route)
 	}
 
-	return routes
+	return routes, nil
 }
 
 func (r *RouteCache) Get(key string) (*model.Route, bool) {
@@ -102,7 +118,7 @@ func (r *RouteCache) syncCache(findRoutes func() ([]*model.Route, error)) {
 	nc := newCache(len(routes))
 
 	for _, route := range routes {
-		nc[route.Pattern+":"+string(route.Method)] = route
+		nc[route.Pattern+":"+route.Method] = route
 	}
 
 	r.rw.Lock()

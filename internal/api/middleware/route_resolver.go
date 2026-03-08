@@ -10,7 +10,7 @@ import (
 )
 
 type RouteStorer interface {
-	All() []*model.Route
+	FindActiveByFilter(filter *model.RouteFilter) ([]*model.Route, error)
 }
 
 const matchedRouteKey contextKey = "matched_route"
@@ -20,7 +20,13 @@ var ErrRouteNotFound = errors.New("route not found")
 func ResolveRoute(routeStore RouteStorer) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			routes := routeStore.All()
+			routes, err := routeStore.FindActiveByFilter(nil)
+
+			if err != nil {
+				slog.Error("failed to find routes from storer", "err", err)
+				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+				return
+			}
 
 			route, err := findRoute(routes, r)
 
@@ -46,7 +52,7 @@ func findRoute(routes []*model.Route, r *http.Request) (*model.Route, error) {
 	requestSegments := splitUri(r.URL.Path)
 
 	for _, route := range routes {
-		if string(route.Method) != r.Method {
+		if route.Method != r.Method {
 			continue
 		}
 

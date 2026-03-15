@@ -36,8 +36,13 @@ func newTokenRequest() tokenRequest {
 
 func (b *Bucket) RequestToken() bool {
 	request := newTokenRequest()
-	b.tokenRequested <- request
-	return <-request.response
+
+	select {
+	case b.tokenRequested <- request:
+		return <-request.response
+	default:
+		return false
+	}
 }
 
 func (b *Bucket) UpdateCapacity(newCapacity int) {

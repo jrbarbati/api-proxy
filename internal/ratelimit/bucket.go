@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type Bucket struct {
+type bucket struct {
 	capacity       int
 	tokens         int
 	lastRefill     time.Time
@@ -18,8 +18,8 @@ type tokenRequest struct {
 	response chan bool
 }
 
-func NewBucket(capacity int) *Bucket {
-	return &Bucket{
+func newBucket(capacity int) *bucket {
+	return &bucket{
 		capacity:       capacity,
 		tokens:         capacity,
 		lastRefill:     time.Now(),
@@ -34,7 +34,7 @@ func newTokenRequest() tokenRequest {
 	}
 }
 
-func (b *Bucket) RequestToken() bool {
+func (b *bucket) requestToken() bool {
 	request := newTokenRequest()
 
 	select {
@@ -45,11 +45,11 @@ func (b *Bucket) RequestToken() bool {
 	}
 }
 
-func (b *Bucket) UpdateCapacity(newCapacity int) {
+func (b *bucket) UpdateCapacity(newCapacity int) {
 	b.capacityUpdate <- newCapacity
 }
 
-func (b *Bucket) Start(ctx context.Context) {
+func (b *bucket) Start(ctx context.Context) {
 	bucketCtx, cancel := context.WithCancel(ctx)
 	b.stop = cancel
 
@@ -72,13 +72,13 @@ func (b *Bucket) Start(ctx context.Context) {
 	}()
 }
 
-func (b *Bucket) Stop() {
+func (b *bucket) Stop() {
 	if b.stop != nil {
 		b.stop()
 	}
 }
 
-func (b *Bucket) takeToken() bool {
+func (b *bucket) takeToken() bool {
 	if b.tokens <= 0 {
 		return false
 	}
@@ -87,7 +87,7 @@ func (b *Bucket) takeToken() bool {
 	return true
 }
 
-func (b *Bucket) updateCapacity(newCapacity int) {
+func (b *bucket) updateCapacity(newCapacity int) {
 	difference := b.capacity - newCapacity
 
 	if difference == 0 {
@@ -98,7 +98,7 @@ func (b *Bucket) updateCapacity(newCapacity int) {
 	b.tokens = max(0, b.tokens-difference)
 }
 
-func (b *Bucket) refill() {
+func (b *bucket) refill() {
 	b.tokens = b.capacity
 	b.lastRefill = time.Now()
 }

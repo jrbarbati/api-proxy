@@ -49,7 +49,7 @@ func (server *Server) Start() error {
 	router := chi.NewRouter()
 
 	routeCache := cache.NewRouteCache()
-	rateLimitCache := ratelimit.NewRateLimitCache()
+	inMemRateLimiter := ratelimit.NewMemoryRateLimiter()
 
 	internalUserRepo := repository.NewInternalUserRepository(server.db)
 	orgRepo := repository.NewOrgRepository(server.db)
@@ -79,7 +79,7 @@ func (server *Server) Start() error {
 	router.With(
 		middleware.LogRequest(requestLogger),
 		middleware.ExternalAuth(server.jwtSigningSecret),
-		middleware.RateLimit(rateLimitCache),
+		middleware.RateLimit(inMemRateLimiter),
 		middleware.ResolveRoute(routeCache),
 	).Handle("/*", NewProxyHandler())
 
@@ -90,7 +90,7 @@ func (server *Server) Start() error {
 	routeCache.StartSync(ctx, 2*time.Minute, func() ([]*model.Route, error) { // TODO: Do some benchmarking on routeRepo.FindActiveByFilter and/orgRepo the syncCache() method and adjust the interval accordingly
 		return routeRepo.FindActiveByFilter(nil)
 	})
-	rateLimitCache.StartSync(ctx, 5*time.Minute, func() ([]*model.RateLimit, error) {
+	inMemRateLimiter.StartSync(ctx, 5*time.Minute, func() ([]*model.RateLimit, error) {
 		return rateLimitRepo.FindActiveByFilter(nil)
 	})
 	httpServer := server.listenAndServe(router)

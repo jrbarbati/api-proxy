@@ -111,7 +111,7 @@ func (r *RouteCache) syncCache(findRoutes func() ([]*model.Route, error)) {
 	routes, err := findRoutes()
 
 	if err != nil {
-		slog.Error("error syncing routes from db to cache: ", err)
+		slog.Error("error syncing routes from db to cache", "err", err)
 		return
 	}
 

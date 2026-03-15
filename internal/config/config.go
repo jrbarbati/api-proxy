@@ -16,12 +16,14 @@ const (
 )
 
 var ErrInvalidLoggingRequestQueueSize = errors.New("invalid logging request queue size")
+var ErrInvalidLoggingRequestRetention = errors.New("invalid logging request retention")
 
 type Config struct {
-	Server        *ServerConfig  `yaml:"server"`
-	DB            *DBConfig      `yaml:"db"`
-	JWTConfig     *JWTConfig     `yaml:"jwt"`
-	LoggingConfig *LoggingConfig `yaml:"logging"`
+	Server             *ServerConfig       `yaml:"server"`
+	DB                 *DBConfig           `yaml:"db"`
+	JWTConfig          *JWTConfig          `yaml:"jwt"`
+	LoggingConfig      *LoggingConfig      `yaml:"logging"`
+	RateLimitingConfig *RateLimitingConfig `yaml:"rateLimiting"`
 }
 
 type LoggingConfig struct {
@@ -36,6 +38,15 @@ type LoggingRequestConfig struct {
 
 type ServerConfig struct {
 	Port string `yaml:"port"`
+}
+
+type RateLimitingConfig struct {
+	Backend string       `yaml:"backend"`
+	Redis   *RedisConfig `yaml:"redis"`
+}
+
+type RedisConfig struct {
+	URL string `yaml:"url"`
 }
 
 type DBConfig struct {
@@ -75,6 +86,14 @@ func LoadConfig(path string) (*Config, error) {
 func applyEnvOverrides(config *Config) (*Config, error) {
 	if config.Server == nil {
 		config.Server = &ServerConfig{}
+	}
+
+	if config.RateLimitingConfig == nil {
+		config.RateLimitingConfig = &RateLimitingConfig{}
+	}
+
+	if config.RateLimitingConfig.Redis == nil {
+		config.RateLimitingConfig.Redis = &RedisConfig{}
 	}
 
 	if config.DB == nil {
@@ -147,10 +166,18 @@ func applyEnvOverrides(config *Config) (*Config, error) {
 		valInt, err := strconv.Atoi(val)
 
 		if err != nil {
-			return nil, ErrInvalidLoggingRequestQueueSize
+			return nil, ErrInvalidLoggingRequestRetention
 		}
 
-		config.LoggingConfig.LoggingRequestConfig.QueueSize = &valInt
+		config.LoggingConfig.LoggingRequestConfig.RetentionDays = &valInt
+	}
+
+	if val := os.Getenv("RATE_LIMIT_BACKEND"); val != "" {
+		config.RateLimitingConfig.Backend = val
+	}
+
+	if val := os.Getenv("REDIS_URL"); val != "" {
+		config.RateLimitingConfig.Redis.URL = val
 	}
 
 	if config.Server.Port == "" {

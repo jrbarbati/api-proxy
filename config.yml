@@ -11,6 +11,11 @@ logging:
 server:
   port: "8080"
 
+rate_limiting:
+  backend: "redis" # or "memory"
+  redis:
+    url: http://localhost:6379
+
 db:
   url: localhost
   port: "3306"

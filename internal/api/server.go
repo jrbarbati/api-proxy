@@ -71,6 +71,7 @@ func (server *Server) Start() error {
 		r.Mount("/rate-limits", NewRateLimitHandler(rateLimitRepo).Router())
 		r.Mount("/routes", NewRouteHandler(routeRepo).Router())
 		r.Mount("/service-accounts", NewServiceAccountHandler(serviceAccountRepo).Router())
+		r.Mount("/requests", NewRequestHandler(requestRepo).Router())
 	})
 
 	router.With(

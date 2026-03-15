@@ -60,7 +60,7 @@ func (rl RequestLogger) Start(ctx context.Context) {
 					Method:     entry.Method,
 					URL:        entry.URL,
 					StatusCode: entry.StatusCode,
-					Latency:    entry.Latency,
+					Latency:    entry.Latency.Milliseconds(),
 				}); err != nil {
 					slog.Error("Failed to insert request", "method", entry.Method, "url", entry.URL)
 				}

@@ -12,7 +12,7 @@ server:
   port: "8080"
 
 rate_limiting:
-  backend: "ratelimit" # or "memory"
+  backend: "redis" # or "memory"
   redis:
     url: http://localhost:6379
 

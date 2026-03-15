@@ -1,14 +1,18 @@
 package middleware
 
 import (
+	"api-proxy/internal/model"
+	"context"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
 type RateLimiter interface {
 	AllowRequest(orgID, saID int) bool
+	StartSync(ctx context.Context, interval time.Duration, findRateLimits func() ([]*model.RateLimit, error))
 }
 
 func RateLimit(rateLimiter RateLimiter) func(http.Handler) http.Handler {

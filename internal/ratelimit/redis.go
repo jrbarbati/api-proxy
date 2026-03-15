@@ -75,6 +75,9 @@ func (rrl *RedisRateLimiter) StartSync(ctx context.Context, interval time.Durati
 }
 
 func (rrl *RedisRateLimiter) allow(ctx context.Context, bucketKey string, limit int) bool {
+	// TODO: Implement
+	// 	Ask redis for the current token count (remaining?) based on the bucket key
+	// 	If it has one, reduce the number by 1 and allow the request.
 	return false
 }
 

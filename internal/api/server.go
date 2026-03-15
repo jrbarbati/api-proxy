@@ -28,6 +28,8 @@ type Server struct {
 	port                  string
 	db                    *sql.DB
 	requestLogQueueSize   int
+	rateLimiter           string
+	redisUrl              string
 }
 
 // NewServer creates a server listening on the specified port
@@ -41,15 +43,23 @@ func NewServer(
 		adminJwtSigningSecret: c.JWTConfig.Admin.SigningSecret,
 		db:                    db,
 		requestLogQueueSize:   *c.LoggingConfig.LoggingRequestConfig.QueueSize,
+		rateLimiter:           c.RateLimitingConfig.Backend,
+		redisUrl:              c.RateLimitingConfig.Redis.URL,
 	}
 }
 
 // Start spins up the server so and registers any handlers as well as provides a graceful shutdown
 func (server *Server) Start() error {
+	var rateLimiter middleware.RateLimiter
 	router := chi.NewRouter()
 
 	routeCache := cache.NewRouteCache()
-	inMemRateLimiter := ratelimit.NewMemoryRateLimiter()
+
+	if server.rateLimiter == "memory" || server.redisUrl == "" {
+		rateLimiter = ratelimit.NewMemoryRateLimiter()
+	} else {
+		rateLimiter = ratelimit.NewRedisRateLimiter(server.redisUrl)
+	}
 
 	internalUserRepo := repository.NewInternalUserRepository(server.db)
 	orgRepo := repository.NewOrgRepository(server.db)
@@ -79,7 +89,7 @@ func (server *Server) Start() error {
 	router.With(
 		middleware.LogRequest(requestLogger),
 		middleware.ExternalAuth(server.jwtSigningSecret),
-		middleware.RateLimit(inMemRateLimiter),
+		middleware.RateLimit(rateLimiter),
 		middleware.ResolveRoute(routeCache),
 	).Handle("/*", NewProxyHandler())
 
@@ -90,7 +100,7 @@ func (server *Server) Start() error {
 	routeCache.StartSync(ctx, 2*time.Minute, func() ([]*model.Route, error) { // TODO: Do some benchmarking on routeRepo.FindActiveByFilter and/orgRepo the syncCache() method and adjust the interval accordingly
 		return routeRepo.FindActiveByFilter(nil)
 	})
-	inMemRateLimiter.StartSync(ctx, 5*time.Minute, func() ([]*model.RateLimit, error) {
+	rateLimiter.StartSync(ctx, 5*time.Minute, func() ([]*model.RateLimit, error) {
 		return rateLimitRepo.FindActiveByFilter(nil)
 	})
 	httpServer := server.listenAndServe(router)

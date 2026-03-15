@@ -3,6 +3,10 @@ jwt:
   admin:
     signing_secret: 32fj32l3;f032f09f32
 
+logging:
+  request:
+    queue_size: 150
+
 server:
   port: "8080"
 

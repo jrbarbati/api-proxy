@@ -1,15 +1,20 @@
 package config
 
 import (
+	"errors"
 	"os"
+	"strconv"
 
 	"gopkg.in/yaml.v3"
 )
 
 const (
-	DefaultServerPort = "8080"
-	defaultLogLevel   = "INFO"
+	DefaultServerPort          = "8080"
+	defaultLogLevel            = "INFO"
+	defaultRequestLogQueueSize = 500
 )
+
+var ErrInvalidLoggingRequestQueueSize = errors.New("invalid logging request queue size")
 
 type Config struct {
 	Server        *ServerConfig  `yaml:"server"`
@@ -19,7 +24,12 @@ type Config struct {
 }
 
 type LoggingConfig struct {
-	Level string `yaml:"level"`
+	Level                string                `yaml:"level"`
+	LoggingRequestConfig *LoggingRequestConfig `yaml:"request"`
+}
+
+type LoggingRequestConfig struct {
+	QueueSize *int `yaml:"queue_size"`
 }
 
 type ServerConfig struct {
@@ -57,10 +67,10 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, err
 	}
 
-	return applyEnvOverrides(config), nil
+	return applyEnvOverrides(config)
 }
 
-func applyEnvOverrides(config *Config) *Config {
+func applyEnvOverrides(config *Config) (*Config, error) {
 	if config.Server == nil {
 		config.Server = &ServerConfig{}
 	}
@@ -79,6 +89,10 @@ func applyEnvOverrides(config *Config) *Config {
 
 	if config.LoggingConfig == nil {
 		config.LoggingConfig = &LoggingConfig{}
+	}
+
+	if config.LoggingConfig.LoggingRequestConfig == nil {
+		config.LoggingConfig.LoggingRequestConfig = &LoggingRequestConfig{}
 	}
 
 	if val := os.Getenv("SERVER_PORT"); val != "" {
@@ -117,6 +131,16 @@ func applyEnvOverrides(config *Config) *Config {
 		config.LoggingConfig.Level = val
 	}
 
+	if val := os.Getenv("LOG_REQUEST_QUEUE_SIZE"); val != "" {
+		valInt, err := strconv.Atoi(val)
+
+		if err != nil {
+			return nil, ErrInvalidLoggingRequestQueueSize
+		}
+
+		config.LoggingConfig.LoggingRequestConfig.QueueSize = &valInt
+	}
+
 	if config.Server.Port == "" {
 		config.Server.Port = DefaultServerPort
 	}
@@ -125,5 +149,9 @@ func applyEnvOverrides(config *Config) *Config {
 		config.LoggingConfig.Level = defaultLogLevel
 	}
 
-	return config
+	if config.LoggingConfig.LoggingRequestConfig.QueueSize == nil {
+		config.LoggingConfig.LoggingRequestConfig.QueueSize = new(defaultRequestLogQueueSize)
+	}
+
+	return config, nil
 }

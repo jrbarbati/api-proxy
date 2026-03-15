@@ -1,10 +1,13 @@
 package middleware
 
 import (
-	"log/slog"
 	"net/http"
 	"time"
 )
+
+type Logger interface {
+	Log(method, url string, statusCode int, latency time.Duration)
+}
 
 type responseRecorder struct {
 	http.ResponseWriter
@@ -16,24 +19,16 @@ func (rr *responseRecorder) WriteHeader(code int) {
 	rr.ResponseWriter.WriteHeader(code)
 }
 
-func LogRequest(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		rr := &responseRecorder{ResponseWriter: w, statusCode: http.StatusOK}
+func LogRequest(logger Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			rr := &responseRecorder{ResponseWriter: w, statusCode: http.StatusOK}
 
-		start := time.Now()
-		next.ServeHTTP(rr, r)
-		end := time.Now()
+			start := time.Now()
+			next.ServeHTTP(rr, r)
+			end := time.Now()
 
-		slog.Info(
-			"Request completed.",
-			"method",
-			r.Method,
-			"path",
-			r.URL.Path,
-			"status",
-			rr.statusCode,
-			"response_time",
-			end.Sub(start),
-		)
-	})
+			logger.Log(r.Method, r.URL.Path, rr.statusCode, end.Sub(start))
+		})
+	}
 }

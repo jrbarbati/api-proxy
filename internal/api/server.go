@@ -4,6 +4,7 @@ import (
 	"api-proxy/internal/api/middleware"
 	"api-proxy/internal/cache"
 	"api-proxy/internal/config"
+	"api-proxy/internal/logger"
 	"api-proxy/internal/model"
 	"api-proxy/internal/repository"
 	"context"
@@ -24,8 +25,8 @@ type Server struct {
 	jwtSigningSecret      string
 	adminJwtSigningSecret string
 	port                  string
-	routeCacheTTL         string
 	db                    *sql.DB
+	requestLogQueueSize   int
 }
 
 // NewServer creates a server listening on the specified port
@@ -38,12 +39,15 @@ func NewServer(
 		jwtSigningSecret:      c.JWTConfig.SigningSecret,
 		adminJwtSigningSecret: c.JWTConfig.Admin.SigningSecret,
 		db:                    db,
+		requestLogQueueSize:   *c.LoggingConfig.LoggingRequestConfig.QueueSize,
 	}
 }
 
 // Start spins up the server so and registers any handlers as well as provides a graceful shutdown
 func (server *Server) Start() error {
 	router := chi.NewRouter()
+
+	requestLogger := logger.NewRequestLogger(server.requestLogQueueSize)
 
 	internalUserRepo := repository.NewInternalUserRepository(server.db)
 	orgRepo := repository.NewOrgRepository(server.db)
@@ -69,7 +73,7 @@ func (server *Server) Start() error {
 	})
 
 	router.With(
-		middleware.LogRequest,
+		middleware.LogRequest(requestLogger),
 		middleware.ExternalAuth(server.jwtSigningSecret),
 		middleware.RateLimit(rateLimitCache),
 		middleware.ResolveRoute(routeCache),
@@ -78,6 +82,7 @@ func (server *Server) Start() error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
+	requestLogger.Start(ctx)
 	routeCache.StartSync(ctx, 2*time.Minute, func() ([]*model.Route, error) { // TODO: Do some benchmarking on routeRepo.FindActiveByFilter and/orgRepo the syncCache() method and adjust the interval accordingly
 		return routeRepo.FindActiveByFilter(nil)
 	})

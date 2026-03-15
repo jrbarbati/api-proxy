@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS request (
+    id INT NOT NULL AUTO_INCREMENT,
+    method VARCHAR(15) NOT NULL,
+    url VARCHAR(255) NOT NULL,
+    status_code INT NOT NULL,
+    latency BIGINT NOT NULL,
+    created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+
+    PRIMARY KEY (id)
+);

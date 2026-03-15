@@ -1,10 +1,15 @@
 package logger
 
 import (
+	"api-proxy/internal/model"
 	"context"
 	"log/slog"
 	"time"
 )
+
+type RequestDataStorer interface {
+	Insert(request *model.Request) (*model.Request, error)
+}
 
 type RequestLog struct {
 	Method     string
@@ -14,12 +19,14 @@ type RequestLog struct {
 }
 
 type RequestLogger struct {
-	ch chan RequestLog
+	ch        chan RequestLog
+	dataStore RequestDataStorer
 }
 
-func NewRequestLogger(queueSize int) RequestLogger {
+func NewRequestLogger(requestDataStore RequestDataStorer, queueSize int) RequestLogger {
 	return RequestLogger{
-		ch: make(chan RequestLog, queueSize),
+		ch:        make(chan RequestLog, queueSize),
+		dataStore: requestDataStore,
 	}
 }
 
@@ -43,24 +50,20 @@ func (rl RequestLogger) Log(method, url string, statusCode int, latency time.Dur
 
 // Start starts up the goroutine to handle log requests from the channel
 func (rl RequestLogger) Start(ctx context.Context) {
-	// TODO: Here instead of logging, we can do something more complicated like saving to a DB or other persistence mechanism
 	slog.Info("Starting request logger...", "queue_size", cap(rl.ch))
 
 	go func() {
 		for {
 			select {
 			case entry := <-rl.ch:
-				slog.Info(
-					"Request completed.",
-					"method",
-					entry.Method,
-					"path",
-					entry.URL,
-					"status",
-					entry.StatusCode,
-					"response_time",
-					entry.Latency,
-				)
+				if _, err := rl.dataStore.Insert(&model.Request{
+					Method:     entry.Method,
+					URL:        entry.URL,
+					StatusCode: entry.StatusCode,
+					Latency:    entry.Latency,
+				}); err != nil {
+					slog.Error("Failed to insert request", "method", entry.Method, "url", entry.URL)
+				}
 			case <-ctx.Done():
 				return
 			}

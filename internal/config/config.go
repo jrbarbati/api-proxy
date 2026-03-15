@@ -9,9 +9,10 @@ import (
 )
 
 const (
-	DefaultServerPort          = "8080"
-	defaultLogLevel            = "INFO"
-	defaultRequestLogQueueSize = 500
+	DefaultServerPort           = "8080"
+	defaultLogLevel             = "INFO"
+	defaultRequestLogQueueSize  = 500
+	defaultRequestRetentionDays = 7
 )
 
 var ErrInvalidLoggingRequestQueueSize = errors.New("invalid logging request queue size")
@@ -29,7 +30,8 @@ type LoggingConfig struct {
 }
 
 type LoggingRequestConfig struct {
-	QueueSize *int `yaml:"queue_size"`
+	QueueSize     *int `yaml:"queue_size"`
+	RetentionDays *int `yaml:"retention_days"`
 }
 
 type ServerConfig struct {
@@ -141,6 +143,16 @@ func applyEnvOverrides(config *Config) (*Config, error) {
 		config.LoggingConfig.LoggingRequestConfig.QueueSize = &valInt
 	}
 
+	if val := os.Getenv("LOG_REQUEST_RETENTION_DAYS"); val != "" {
+		valInt, err := strconv.Atoi(val)
+
+		if err != nil {
+			return nil, ErrInvalidLoggingRequestQueueSize
+		}
+
+		config.LoggingConfig.LoggingRequestConfig.QueueSize = &valInt
+	}
+
 	if config.Server.Port == "" {
 		config.Server.Port = DefaultServerPort
 	}
@@ -151,6 +163,10 @@ func applyEnvOverrides(config *Config) (*Config, error) {
 
 	if config.LoggingConfig.LoggingRequestConfig.QueueSize == nil {
 		config.LoggingConfig.LoggingRequestConfig.QueueSize = new(defaultRequestLogQueueSize)
+	}
+
+	if config.LoggingConfig.LoggingRequestConfig.RetentionDays == nil {
+		config.LoggingConfig.LoggingRequestConfig.RetentionDays = new(defaultRequestRetentionDays)
 	}
 
 	return config, nil

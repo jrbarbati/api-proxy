@@ -47,8 +47,6 @@ func NewServer(
 func (server *Server) Start() error {
 	router := chi.NewRouter()
 
-	requestLogger := logger.NewRequestLogger(server.requestLogQueueSize)
-
 	internalUserRepo := repository.NewInternalUserRepository(server.db)
 	orgRepo := repository.NewOrgRepository(server.db)
 	rateLimitRepo := repository.NewRateLimitRepository(server.db)
@@ -56,6 +54,9 @@ func (server *Server) Start() error {
 	routeCache := cache.NewRouteCache()
 	rateLimitCache := cache.NewRateLimitCache()
 	serviceAccountRepo := repository.NewServiceAccountRepository(server.db)
+	requestRepo := repository.NewRequestRepository(server.db)
+
+	requestLogger := logger.NewRequestLogger(requestRepo, server.requestLogQueueSize)
 
 	authHandler := NewAuthHandler(server.jwtSigningSecret, server.adminJwtSigningSecret, serviceAccountRepo, internalUserRepo)
 

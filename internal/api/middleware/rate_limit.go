@@ -1,19 +1,17 @@
 package middleware
 
 import (
-	"api-proxy/internal/cache"
 	"log/slog"
 	"net/http"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type RateLimitBucketizer interface {
-	OrgBucket(id int) (*cache.Bucket, bool)
-	SABucket(id int) (*cache.Bucket, bool)
+type RateLimiter interface {
+	AllowRequest(orgID, saID int) bool
 }
 
-func RateLimit(rateLimitBucketizer RateLimitBucketizer) func(http.Handler) http.Handler {
+func RateLimit(rateLimiter RateLimiter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.Context().Value(claimsKey) == nil {
@@ -73,15 +71,7 @@ func RateLimit(rateLimitBucketizer RateLimitBucketizer) func(http.Handler) http.
 				return
 			}
 
-			orgBucket, orgHasBucket := rateLimitBucketizer.OrgBucket(orgID)
-			saBucket, saHasBucket := rateLimitBucketizer.SABucket(serviceAccountID)
-
-			if !orgHasBucket && !saHasBucket {
-				next.ServeHTTP(w, r)
-				return
-			}
-
-			if (orgBucket != nil && !orgBucket.RequestToken()) || (saBucket != nil && !saBucket.RequestToken()) {
+			if !rateLimiter.AllowRequest(orgID, serviceAccountID) {
 				slog.Info("rate limiting request", "org_id", orgID, "service_account_id", serviceAccountID)
 				http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)
 				return

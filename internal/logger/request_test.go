@@ -138,6 +138,8 @@ func TestRequestLogger_Start(t *testing.T) {
 	}
 }
 
+// Essentially tests how long it takes for Log to put something into the channel, as the channel is async (buffered channel)
+// so we do not wait for it to respond to us.
 func BenchmarkRequestLogger_Log(b *testing.B) {
 	b.ReportAllocs()
 

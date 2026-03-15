@@ -1,4 +1,4 @@
-package cache
+package ratelimit
 
 import (
 	"api-proxy/internal/model"
@@ -22,20 +22,15 @@ func NewRateLimitCache() *RateLimitCache {
 	}
 }
 
-func (rlc *RateLimitCache) OrgBucket(orgID int) (*Bucket, bool) {
-	rlc.rw.RLock()
-	defer rlc.rw.RUnlock()
+func (rlc *RateLimitCache) AllowRequest(orgID, saID int) bool {
+	orgBucket, orgHasBucket := rlc.orgBucket(orgID)
+	saBucket, saHasBucket := rlc.saBucket(saID)
 
-	bucket, ok := rlc.orgLimits[orgID]
-	return bucket, ok
-}
+	if !orgHasBucket && !saHasBucket {
+		return true
+	}
 
-func (rlc *RateLimitCache) SABucket(saID int) (*Bucket, bool) {
-	rlc.rw.RLock()
-	defer rlc.rw.RUnlock()
-
-	bucket, ok := rlc.saLimits[saID]
-	return bucket, ok
+	return (orgBucket == nil || orgBucket.RequestToken()) && (saBucket == nil || saBucket.RequestToken())
 }
 
 func (rlc *RateLimitCache) StartSync(ctx context.Context, interval time.Duration, findRateLimits func() ([]*model.RateLimit, error)) {
@@ -54,6 +49,22 @@ func (rlc *RateLimitCache) StartSync(ctx context.Context, interval time.Duration
 			}
 		}
 	}()
+}
+
+func (rlc *RateLimitCache) orgBucket(orgID int) (*Bucket, bool) {
+	rlc.rw.RLock()
+	defer rlc.rw.RUnlock()
+
+	bucket, ok := rlc.orgLimits[orgID]
+	return bucket, ok
+}
+
+func (rlc *RateLimitCache) saBucket(saID int) (*Bucket, bool) {
+	rlc.rw.RLock()
+	defer rlc.rw.RUnlock()
+
+	bucket, ok := rlc.saLimits[saID]
+	return bucket, ok
 }
 
 func (rlc *RateLimitCache) syncCache(ctx context.Context, findRateLimits func() ([]*model.RateLimit, error)) {

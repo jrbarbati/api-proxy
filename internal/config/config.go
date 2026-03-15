@@ -42,7 +42,7 @@ type ServerConfig struct {
 
 type RateLimitingConfig struct {
 	Backend string       `yaml:"backend"`
-	Redis   *RedisConfig `yaml:"redis"`
+	Redis   *RedisConfig `yaml:"ratelimit"`
 }
 
 type RedisConfig struct {

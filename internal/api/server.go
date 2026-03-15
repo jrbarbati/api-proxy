@@ -6,6 +6,7 @@ import (
 	"api-proxy/internal/config"
 	"api-proxy/internal/logger"
 	"api-proxy/internal/model"
+	"api-proxy/internal/ratelimit"
 	"api-proxy/internal/repository"
 	"context"
 	"database/sql"
@@ -47,12 +48,13 @@ func NewServer(
 func (server *Server) Start() error {
 	router := chi.NewRouter()
 
+	routeCache := cache.NewRouteCache()
+	rateLimitCache := ratelimit.NewRateLimitCache()
+
 	internalUserRepo := repository.NewInternalUserRepository(server.db)
 	orgRepo := repository.NewOrgRepository(server.db)
 	rateLimitRepo := repository.NewRateLimitRepository(server.db)
 	routeRepo := repository.NewRouteRepository(server.db)
-	routeCache := cache.NewRouteCache()
-	rateLimitCache := cache.NewRateLimitCache()
 	serviceAccountRepo := repository.NewServiceAccountRepository(server.db)
 	requestRepo := repository.NewRequestRepository(server.db)
 

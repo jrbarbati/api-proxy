@@ -31,7 +31,8 @@ type RedisRateLimiter struct {
 func NewRedisRateLimiter(url string) *RedisRateLimiter {
 	return &RedisRateLimiter{
 		client: redis.NewClient(&redis.Options{
-			Addr: url,
+			Addr:       url,
+			MaxRetries: 1,
 		}),
 		rw:        sync.RWMutex{},
 		orgLimits: make(map[int]int),

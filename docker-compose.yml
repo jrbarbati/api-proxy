@@ -14,12 +14,10 @@ services:
     ports:
       - "6379:6379"
 
-  redis-commander:
-    image: rediscommander/redis-commander:latest
-    environment:
-      - REDIS_HOSTS=local:ratelimit:6379
+  redis-insight:
+    image: redis/redisinsight:latest
     ports:
-      - "8081:8081"
+      - "5540:5540"
     depends_on:
       - redis
 

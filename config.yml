@@ -14,7 +14,7 @@ server:
 rate_limiting:
   backend: "redis" # or "memory"
   redis:
-    url: http://localhost:6379
+    url: localhost:6379
 
 db:
   url: localhost

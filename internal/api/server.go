@@ -56,8 +56,10 @@ func (server *Server) Start() error {
 	routeCache := cache.NewRouteCache()
 
 	if server.rateLimiter == "memory" || server.redisUrl == "" {
+		slog.Info("using in-memory rate limiter")
 		rateLimiter = ratelimit.NewMemoryRateLimiter()
 	} else {
+		slog.Info("using redis rate limiter")
 		rateLimiter = ratelimit.NewRedisRateLimiter(server.redisUrl)
 	}
 

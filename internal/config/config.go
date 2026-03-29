@@ -23,7 +23,7 @@ type Config struct {
 	DB                 *DBConfig           `yaml:"db"`
 	JWTConfig          *JWTConfig          `yaml:"jwt"`
 	LoggingConfig      *LoggingConfig      `yaml:"logging"`
-	RateLimitingConfig *RateLimitingConfig `yaml:"rateLimiting"`
+	RateLimitingConfig *RateLimitingConfig `yaml:"rate_limiting"`
 }
 
 type LoggingConfig struct {
@@ -42,7 +42,7 @@ type ServerConfig struct {
 
 type RateLimitingConfig struct {
 	Backend string       `yaml:"backend"`
-	Redis   *RedisConfig `yaml:"ratelimit"`
+	Redis   *RedisConfig `yaml:"redis"`
 }
 
 type RedisConfig struct {

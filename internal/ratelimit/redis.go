@@ -11,6 +11,16 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+const (
+	incrementAndCountRedisScript = `local count = redis.call('INCR', KEYS[1])
+if count == 1 then
+    redis.call('EXPIRE', KEYS[1], 60)
+end
+return count`
+)
+
+var allowScript = redis.NewScript(incrementAndCountRedisScript)
+
 type RedisRateLimiter struct {
 	client    *redis.Client
 	rw        sync.RWMutex
@@ -37,23 +47,32 @@ func (rrl *RedisRateLimiter) AllowRequest(orgID, saID int) bool {
 	saLimit, saHasLimit := rrl.saLimits[saID]
 	rrl.rw.RUnlock()
 
+	now := time.Now()
+
 	if !orgHasLimit && !saHasLimit {
 		return true
 	}
 
-	if orgHasLimit {
-		if !rrl.allow(ctx, fmt.Sprintf("org:%d", orgID), orgLimit) {
-			return false
-		}
+	if orgHasLimit && !rrl.allow(ctx, buildKey("org", orgID, now), orgLimit) {
+		return false
 	}
 
-	if saHasLimit {
-		if !rrl.allow(ctx, fmt.Sprintf("sa:%d", saID), saLimit) {
-			return false
-		}
+	if saHasLimit && !rrl.allow(ctx, buildKey("sa", saID, now), saLimit) {
+		return false
 	}
 
 	return true
+}
+
+func (rrl *RedisRateLimiter) allow(ctx context.Context, bucketKey string, limit int) bool {
+	count, err := allowScript.Run(ctx, rrl.client, []string{bucketKey}).Int()
+
+	if err != nil {
+		slog.Error("redis invoke fail", "err", err)
+		return true
+	}
+
+	return count <= limit
 }
 
 func (rrl *RedisRateLimiter) StartSync(ctx context.Context, interval time.Duration, findRateLimits func() ([]*model.RateLimit, error)) {
@@ -72,13 +91,6 @@ func (rrl *RedisRateLimiter) StartSync(ctx context.Context, interval time.Durati
 			}
 		}
 	}()
-}
-
-func (rrl *RedisRateLimiter) allow(ctx context.Context, bucketKey string, limit int) bool {
-	// TODO: Implement
-	// 	Ask redis for the current token count (remaining?) based on the bucket key
-	// 	If it has one, reduce the number by 1 and allow the request.
-	return false
 }
 
 func (rrl *RedisRateLimiter) syncCache(findRateLimits func() ([]*model.RateLimit, error)) {
@@ -122,4 +134,8 @@ func (rrl *RedisRateLimiter) syncCache(findRateLimits func() ([]*model.RateLimit
 	}
 
 	slog.Info("finished rate limit cache sync...")
+}
+
+func buildKey(t string, id int, now time.Time) string {
+	return fmt.Sprintf("%s:%d:%s", t, id, now.Format("2006-01-02T15.04"))
 }

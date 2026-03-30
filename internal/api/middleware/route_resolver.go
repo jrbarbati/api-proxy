@@ -17,6 +17,14 @@ const matchedRouteKey contextKey = "matched_route"
 
 var ErrRouteNotFound = errors.New("route not found")
 
+type routeHolder struct {
+	route *model.Route
+}
+
+func NewRouteHolder(r *http.Request) *http.Request {
+	return r.WithContext(context.WithValue(r.Context(), matchedRouteKey, &routeHolder{}))
+}
+
 func ResolveRoute(routeStore RouteStorer) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -38,14 +46,23 @@ func ResolveRoute(routeStore RouteStorer) func(http.Handler) http.Handler {
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), matchedRouteKey, route)
-			next.ServeHTTP(w, r.WithContext(ctx))
+			if h, ok := r.Context().Value(matchedRouteKey).(*routeHolder); ok && h != nil {
+				h.route = route
+			}
+
+			next.ServeHTTP(w, r)
 		})
 	}
 }
 
 func MatchedRoute(r *http.Request) *model.Route {
-	return r.Context().Value(matchedRouteKey).(*model.Route)
+	h, ok := r.Context().Value(matchedRouteKey).(*routeHolder)
+
+	if !ok || h == nil {
+		return nil
+	}
+
+	return h.route
 }
 
 func findRoute(routes []*model.Route, r *http.Request) (*model.Route, error) {

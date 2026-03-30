@@ -25,6 +25,7 @@ func LogRequest(logger Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			rr := &responseRecorder{ResponseWriter: w, statusCode: http.StatusOK}
+			r = NewRouteHolder(r)
 
 			start := time.Now()
 			next.ServeHTTP(rr, r)

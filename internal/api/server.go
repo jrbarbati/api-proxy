@@ -91,8 +91,8 @@ func (server *Server) Start() error {
 	router.With(
 		middleware.LogRequest(requestLogger),
 		middleware.ExternalAuth(server.jwtSigningSecret),
-		middleware.RateLimit(rateLimiter),
 		middleware.ResolveRoute(routeCache),
+		middleware.RateLimit(rateLimiter),
 	).Handle("/*", NewProxyHandler())
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

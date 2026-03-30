@@ -9,7 +9,7 @@ import (
 
 const (
 	findRequestsBetween        = "SELECT id, route_id, method, url, status_code, latency, created_at FROM request WHERE ? <= created_at AND created_at <= ?"
-	insertRequest              = "INSERT INTO request (route_id, method, url, status_code, latency, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP(6))"
+	insertRequest              = "INSERT INTO request (route_id, method, url, status_code, latency, created_at) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP(6))"
 	deleteAllRequestsOlderThan = "DELETE FROM request WHERE created_at < ?"
 )
 

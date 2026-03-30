@@ -1,0 +1,256 @@
+package cache
+
+import (
+	"api-proxy/internal/model"
+	"context"
+	"errors"
+	"reflect"
+	"sync"
+	"testing"
+	"time"
+)
+
+func TestRouteCache_Get(t *testing.T) {
+	scenarios := []struct {
+		name          string
+		search        string
+		cache         *RouteCache
+		expectFound   bool
+		expectedRoute *model.Route
+	}{
+		{
+			name:   "cache hit",
+			search: "/api/v1/orgs:GET",
+			cache: &RouteCache{
+				rw: sync.RWMutex{},
+				cache: map[string]*model.Route{
+					"/api/v1/orgs:GET": {
+						ID: 1,
+					},
+				},
+			},
+			expectFound: true,
+			expectedRoute: &model.Route{
+				ID: 1,
+			},
+		},
+		{
+			name:   "cache miss",
+			search: "/api/v1/orgs:POST",
+			cache: &RouteCache{
+				rw: sync.RWMutex{},
+				cache: map[string]*model.Route{
+					"/api/v1/orgs:GET": {
+						ID: 1,
+					},
+				},
+			},
+			expectFound:   false,
+			expectedRoute: nil,
+		},
+	}
+
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
+			route, found := scenario.cache.Get(scenario.search)
+
+			if scenario.expectFound != found {
+				t.Fatalf("expected %v, got %v", scenario.expectFound, found)
+			}
+
+			if !reflect.DeepEqual(scenario.expectedRoute, route) {
+				t.Fatalf("expected %v, got %v", scenario.expectedRoute, route)
+			}
+		})
+	}
+}
+
+func TestRouteCache_Set(t *testing.T) {
+	scenarios := []struct {
+		name          string
+		addKey        string
+		addRoute      *model.Route
+		startingCache *RouteCache
+		endingCache   *RouteCache
+	}{
+		{
+			name:   "set",
+			addKey: "/api/v1/orgs:GET",
+			addRoute: &model.Route{
+				ID: 1,
+			},
+			startingCache: &RouteCache{
+				rw:    sync.RWMutex{},
+				cache: map[string]*model.Route{},
+			},
+			endingCache: &RouteCache{
+				rw: sync.RWMutex{},
+				cache: map[string]*model.Route{
+					"/api/v1/orgs:GET": {
+						ID: 1,
+					},
+				},
+			},
+		},
+	}
+
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
+			scenario.startingCache.Set(scenario.addKey, scenario.addRoute)
+
+			if !reflect.DeepEqual(scenario.endingCache.cache, scenario.startingCache.cache) {
+				t.Fatalf("expected %v, got %v", scenario.endingCache, scenario.startingCache)
+			}
+		})
+	}
+}
+
+func TestRouteCache_Delete(t *testing.T) {
+	scenarios := []struct {
+		name          string
+		removeKey     string
+		startingCache *RouteCache
+		endingCache   *RouteCache
+	}{
+		{
+			name:      "delete",
+			removeKey: "/api/v1/orgs:GET",
+			startingCache: &RouteCache{
+				rw: sync.RWMutex{},
+				cache: map[string]*model.Route{
+					"/api/v1/orgs:GET":  {},
+					"/api/v1/orgs:POST": {},
+				},
+			},
+			endingCache: &RouteCache{
+				rw: sync.RWMutex{},
+				cache: map[string]*model.Route{
+					"/api/v1/orgs:POST": {},
+				},
+			},
+		},
+		{
+			name:      "delete missing key",
+			removeKey: "/api/v1/orgs:PUT",
+			startingCache: &RouteCache{
+				rw: sync.RWMutex{},
+				cache: map[string]*model.Route{
+					"/api/v1/orgs:GET":  {},
+					"/api/v1/orgs:POST": {},
+				},
+			},
+			endingCache: &RouteCache{
+				rw: sync.RWMutex{},
+				cache: map[string]*model.Route{
+					"/api/v1/orgs:GET":  {},
+					"/api/v1/orgs:POST": {},
+				},
+			},
+		},
+	}
+
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
+			scenario.startingCache.Delete(scenario.removeKey)
+
+			if !reflect.DeepEqual(scenario.endingCache.cache, scenario.startingCache.cache) {
+				t.Fatalf("expected %v, got %v", scenario.endingCache, scenario.startingCache)
+			}
+		})
+	}
+}
+
+func TestRouteCache_Clear(t *testing.T) {
+	scenarios := []struct {
+		name          string
+		startingCache *RouteCache
+	}{
+		{
+			name: "clear",
+			startingCache: &RouteCache{
+				rw: sync.RWMutex{},
+				cache: map[string]*model.Route{
+					"/api/v1/orgs:GET":  {},
+					"/api/v1/orgs:POST": {},
+					"/api/v1/orgs:PUT":  {},
+				},
+			},
+		},
+	}
+
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
+			scenario.startingCache.Clear()
+
+			if len(scenario.startingCache.cache) > 0 {
+				t.Fatalf("cache is not empty after Clear() call")
+			}
+		})
+	}
+}
+
+func TestRouteCache_StartSync(t *testing.T) {
+	scenarios := []struct {
+		name                string
+		cancelled           bool
+		tickerDuration      time.Duration
+		findRoutesFn        func() ([]*model.Route, error)
+		expectedFnCallCount int
+	}{
+		{
+			name:           "start",
+			cancelled:      false,
+			tickerDuration: 7 * time.Millisecond,
+			findRoutesFn: func() ([]*model.Route, error) {
+				return nil, nil
+			},
+			expectedFnCallCount: 2,
+		},
+		{
+			name:           "error while finding routes",
+			cancelled:      false,
+			tickerDuration: 7 * time.Millisecond,
+			findRoutesFn: func() ([]*model.Route, error) {
+				return nil, errors.New("test error")
+			},
+			expectedFnCallCount: 2,
+		},
+		{
+			name:           "cancel",
+			cancelled:      true,
+			tickerDuration: 7 * time.Millisecond,
+			findRoutesFn: func() ([]*model.Route, error) {
+				return nil, nil
+			},
+			expectedFnCallCount: 1,
+		},
+	}
+
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
+			count := 0 // local to this iteration
+
+			cache := NewRouteCache()
+			ctx, cancel := context.WithCancel(context.Background())
+
+			findRoutesFn := func() ([]*model.Route, error) {
+				count++
+				return scenario.findRoutesFn()
+			}
+
+			if !scenario.cancelled {
+				cache.StartSync(ctx, scenario.tickerDuration, findRoutesFn)
+				time.Sleep(10 * time.Millisecond)
+				cancel()
+			} else {
+				cache.StartSync(ctx, scenario.tickerDuration, findRoutesFn)
+				cancel()
+				time.Sleep(10 * time.Millisecond)
+			}
+
+			if scenario.expectedFnCallCount != count {
+				t.Fatalf("expected call count %v, got %v", scenario.expectedFnCallCount, count)
+			}
+		})
+	}
+}

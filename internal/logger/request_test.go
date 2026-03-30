@@ -137,20 +137,3 @@ func TestRequestLogger_Start(t *testing.T) {
 		})
 	}
 }
-
-// Essentially tests how long it takes for Log to put something into the channel, as the channel is async (buffered channel)
-// so we do not wait for it to respond to us.
-func BenchmarkRequestLogger_Log(b *testing.B) {
-	requestLogger := NewRequestLogger(&fakeDataStore{}, b.N)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	
-	requestLogger.Start(ctx)
-
-	b.ReportAllocs()
-	b.ResetTimer()
-
-	for b.Loop() {
-		requestLogger.Log("GET", "/api/v1/test", 200, time.Millisecond)
-	}
-}

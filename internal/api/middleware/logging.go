@@ -1,13 +1,14 @@
 package middleware
 
 import (
+	"api-proxy/internal/model"
 	"log/slog"
 	"net/http"
 	"time"
 )
 
 type Logger interface {
-	Log(method, url string, statusCode int, latency time.Duration)
+	Log(route *model.Route, method, url string, statusCode int, latency time.Duration)
 }
 
 type responseRecorder struct {
@@ -41,7 +42,9 @@ func LogRequest(logger Logger) func(http.Handler) http.Handler {
 				end.Sub(start).Milliseconds(),
 			)
 
-			logger.Log(r.Method, r.URL.Path, rr.statusCode, end.Sub(start))
+			route := MatchedRoute(r)
+
+			logger.Log(route, r.Method, r.URL.Path, rr.statusCode, end.Sub(start))
 		})
 	}
 }

@@ -23,6 +23,10 @@ func (f *fakeDataStore) Insert(request *model.Request) (*model.Request, error) {
 }
 
 func TestRequestLogger_Log(t *testing.T) {
+	route := model.Route{
+		ID: 1,
+	}
+
 	scenarios := []struct {
 		name            string
 		readFromChan    bool
@@ -40,7 +44,7 @@ func TestRequestLogger_Log(t *testing.T) {
 			requestLogger := NewRequestLogger(scenario.dataStore, scenario.queueSize)
 
 			for i := 0; i < scenario.numLogs; i++ {
-				requestLogger.Log("GET", "/api/v1/test", 201, time.Duration(200)*time.Millisecond)
+				requestLogger.Log(new(route), "GET", "/api/v1/test", 201, time.Duration(200)*time.Millisecond)
 			}
 
 			if scenario.expectedChanLen != len(requestLogger.ch) {
@@ -50,6 +54,10 @@ func TestRequestLogger_Log(t *testing.T) {
 			if scenario.readFromChan {
 				for i := 0; i < scenario.numLogs; i++ {
 					entry := <-requestLogger.ch
+
+					if entry.Route.ID != route.ID {
+						t.Errorf("expected route id %d, got %d", route.ID, entry.Route.ID)
+					}
 
 					if entry.Method != "GET" {
 						t.Errorf("expected method GET, got %s", entry.Method)
@@ -74,6 +82,10 @@ func TestRequestLogger_Log(t *testing.T) {
 }
 
 func TestRequestLogger_Start(t *testing.T) {
+	route := model.Route{
+		ID: 1,
+	}
+
 	scenarios := []struct {
 		name      string
 		entry     RequestLog
@@ -83,7 +95,7 @@ func TestRequestLogger_Start(t *testing.T) {
 	}{
 		{
 			name:      "Persisted",
-			entry:     NewRequestLog("GET", "/api/v1/test", 201, time.Duration(100)*time.Millisecond),
+			entry:     NewRequestLog(new(route), "GET", "/api/v1/test", 201, time.Duration(100)*time.Millisecond),
 			dataStore: &fakeDataStore{},
 			cancelled: false,
 			assert: func(t *testing.T, ds *fakeDataStore) {
@@ -94,7 +106,7 @@ func TestRequestLogger_Start(t *testing.T) {
 		},
 		{
 			name:      "Errored",
-			entry:     NewRequestLog("GET", "/api/v1/test", 201, time.Duration(100)*time.Millisecond),
+			entry:     NewRequestLog(new(route), "GET", "/api/v1/test", 201, time.Duration(100)*time.Millisecond),
 			dataStore: &fakeDataStore{err: errors.New("test insert err")},
 			cancelled: false,
 			assert: func(t *testing.T, ds *fakeDataStore) {
@@ -105,7 +117,7 @@ func TestRequestLogger_Start(t *testing.T) {
 		},
 		{
 			name:      "Cancelled",
-			entry:     NewRequestLog("GET", "/api/v1/test", 201, time.Duration(100)*time.Millisecond),
+			entry:     NewRequestLog(new(route), "GET", "/api/v1/test", 201, time.Duration(100)*time.Millisecond),
 			dataStore: &fakeDataStore{},
 			cancelled: true,
 			assert: func(t *testing.T, ds *fakeDataStore) {
@@ -130,7 +142,7 @@ func TestRequestLogger_Start(t *testing.T) {
 			} else {
 				cancel()
 				time.Sleep(10 * time.Millisecond)
-				requestLogger.Log("GET", "/api/v1/test", 201, 100*time.Millisecond) // non-blocking
+				requestLogger.Log(new(route), "GET", "/api/v1/test", 201, 100*time.Millisecond) // non-blocking
 			}
 
 			scenario.assert(t, scenario.dataStore.(*fakeDataStore))

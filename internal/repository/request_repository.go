@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	findRequestsBetween        = "SELECT id, method, url, status_code, latency, created_at FROM request WHERE ? <= created_at AND created_at <= ?"
-	insertRequest              = "INSERT INTO request (method, url, status_code, latency, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP(6))"
+	findRequestsBetween        = "SELECT id, route_id, method, url, status_code, latency, created_at FROM request WHERE ? <= created_at AND created_at <= ?"
+	insertRequest              = "INSERT INTO request (route_id, method, url, status_code, latency, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP(6))"
 	deleteAllRequestsOlderThan = "DELETE FROM request WHERE created_at < ?"
 )
 
@@ -31,6 +31,7 @@ func (rr *RequestRepository) Insert(request *model.Request) (*model.Request, err
 	createdId, err := execInsert(
 		rr.db,
 		insertRequest,
+		request.RouteID,
 		request.Method,
 		request.URL,
 		request.StatusCode,
@@ -67,6 +68,7 @@ func (rr *RequestRepository) findRequests(query string, args ...any) ([]*model.R
 
 		rowErr := result.Scan(
 			&request.ID,
+			&request.RouteID,
 			&request.Method,
 			&request.URL,
 			&request.StatusCode,

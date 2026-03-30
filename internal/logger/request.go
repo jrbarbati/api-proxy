@@ -12,6 +12,7 @@ type RequestDataStorer interface {
 }
 
 type RequestLog struct {
+	Route      *model.Route
 	Method     string
 	URL        string
 	StatusCode int
@@ -30,8 +31,9 @@ func NewRequestLogger(requestDataStore RequestDataStorer, queueSize int) Request
 	}
 }
 
-func NewRequestLog(method, url string, statusCode int, latency time.Duration) RequestLog {
+func NewRequestLog(route *model.Route, method, url string, statusCode int, latency time.Duration) RequestLog {
 	return RequestLog{
+		Route:      route,
 		Method:     method,
 		URL:        url,
 		StatusCode: statusCode,
@@ -40,9 +42,9 @@ func NewRequestLog(method, url string, statusCode int, latency time.Duration) Re
 }
 
 // Log insert log requests into the channel for asynchronous logging (if RequestLogger was configured with queueSize > 0, default is 500), synchronous logging if queueSize == 0
-func (rl RequestLogger) Log(method, url string, statusCode int, latency time.Duration) {
+func (rl RequestLogger) Log(route *model.Route, method, url string, statusCode int, latency time.Duration) {
 	select {
-	case rl.ch <- NewRequestLog(method, url, statusCode, latency):
+	case rl.ch <- NewRequestLog(route, method, url, statusCode, latency):
 	default:
 		slog.Warn("request log channel full, dropping entry")
 	}
@@ -57,6 +59,7 @@ func (rl RequestLogger) Start(ctx context.Context) {
 			select {
 			case entry := <-rl.ch:
 				if _, err := rl.dataStore.Insert(&model.Request{
+					RouteID:    entry.Route.ID,
 					Method:     entry.Method,
 					URL:        entry.URL,
 					StatusCode: entry.StatusCode,

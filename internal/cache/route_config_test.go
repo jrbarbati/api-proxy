@@ -2,13 +2,153 @@ package cache
 
 import (
 	"api-proxy/internal/model"
+	"cmp"
 	"context"
 	"errors"
+	"net/http"
 	"reflect"
+	"sort"
 	"sync"
 	"testing"
 	"time"
 )
+
+func TestRouteCache_FindActiveByFilter(t *testing.T) {
+	now := time.Now()
+
+	cache := RouteCache{
+		rw: sync.RWMutex{},
+		cache: map[string]*model.Route{
+			"/api/v1/orgs:GET": {
+				ID: 1, Pattern: "/api/v1/orgs", Method: http.MethodGet, UpdatedAt: new(now),
+			},
+			"/api/v1/orgs:POST": {
+				ID: 2, Pattern: "/api/v1/orgs", Method: http.MethodPost, UpdatedAt: new(now.AddDate(0, 0, -1)),
+			},
+			"/api/v1/orgs:PUT": {
+				ID: 3, Pattern: "/api/v1/users", Method: http.MethodPut, UpdatedAt: new(now.AddDate(0, 0, 1)),
+			},
+			"/api/v1/orgs:DELETE": {
+				ID: 4, Pattern: "/api/v1/users", Method: http.MethodDelete, UpdatedAt: new(now.AddDate(0, 0, -1)),
+			},
+		},
+	}
+	scenarios := []struct {
+		name           string
+		filter         *model.RouteFilter
+		cache          *RouteCache
+		expectedRoutes []*model.Route
+	}{
+		{
+			name:   "all",
+			filter: &model.RouteFilter{},
+			cache:  new(cache),
+			expectedRoutes: []*model.Route{
+				{
+					ID: 1, Pattern: "/api/v1/orgs", Method: http.MethodGet, UpdatedAt: new(now),
+				},
+				{
+					ID: 2, Pattern: "/api/v1/orgs", Method: http.MethodPost, UpdatedAt: new(now.AddDate(0, 0, -1)),
+				},
+				{
+					ID: 3, Pattern: "/api/v1/users", Method: http.MethodPut, UpdatedAt: new(now.AddDate(0, 0, 1)),
+				},
+				{
+					ID: 4, Pattern: "/api/v1/users", Method: http.MethodDelete, UpdatedAt: new(now.AddDate(0, 0, -1)),
+				},
+			},
+		},
+		{
+			name: "pattern",
+			filter: &model.RouteFilter{
+				Pattern: "/api/v1/orgs",
+			},
+			cache: new(cache),
+			expectedRoutes: []*model.Route{
+				{
+					ID: 1, Pattern: "/api/v1/orgs", Method: http.MethodGet, UpdatedAt: new(now),
+				},
+				{
+					ID: 2, Pattern: "/api/v1/orgs", Method: http.MethodPost, UpdatedAt: new(now.AddDate(0, 0, -1)),
+				},
+			},
+		},
+		{
+			name: "method",
+			filter: &model.RouteFilter{
+				Method: http.MethodDelete,
+			},
+			cache: new(cache),
+			expectedRoutes: []*model.Route{
+				{
+					ID: 4, Pattern: "/api/v1/users", Method: http.MethodDelete, UpdatedAt: new(now.AddDate(0, 0, -1)),
+				},
+			},
+		},
+		{
+			name: "update before",
+			filter: &model.RouteFilter{
+				UpdatedBefore: new(now),
+			},
+			cache: new(cache),
+			expectedRoutes: []*model.Route{
+				{
+					ID: 2, Pattern: "/api/v1/orgs", Method: http.MethodPost, UpdatedAt: new(now.AddDate(0, 0, -1)),
+				},
+				{
+					ID: 4, Pattern: "/api/v1/users", Method: http.MethodDelete, UpdatedAt: new(now.AddDate(0, 0, -1)),
+				},
+			},
+		},
+		{
+			name: "update after",
+			filter: &model.RouteFilter{
+				UpdatedAfter: new(now),
+			},
+			cache: new(cache),
+			expectedRoutes: []*model.Route{
+				{
+					ID: 3, Pattern: "/api/v1/users", Method: http.MethodPut, UpdatedAt: new(now.AddDate(0, 0, 1)),
+				},
+			},
+		},
+		{
+			name: "pattern and method",
+			filter: &model.RouteFilter{
+				Pattern: "/api/v1/orgs",
+				Method:  http.MethodPost,
+			},
+			cache: new(cache),
+			expectedRoutes: []*model.Route{
+				{
+					ID: 2, Pattern: "/api/v1/orgs", Method: http.MethodPost, UpdatedAt: new(now.AddDate(0, 0, -1)),
+				},
+			},
+		},
+	}
+
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
+			routes, err := cache.FindActiveByFilter(scenario.filter)
+
+			sort.Slice(routes, func(i, j int) bool {
+				return cmp.Compare(routes[i].ID, routes[j].ID) < 0
+			})
+
+			sort.Slice(scenario.expectedRoutes, func(i, j int) bool {
+				return cmp.Compare(routes[i].ID, routes[j].ID) < 0
+			})
+
+			if err != nil {
+				t.Fatalf("FindActiveByFilter() error = %v", err)
+			}
+
+			if !reflect.DeepEqual(routes, scenario.expectedRoutes) {
+				t.Fatalf("FindActiveByFilter() got = %v, want %v", routes, scenario.expectedRoutes)
+			}
+		})
+	}
+}
 
 func TestRouteCache_Get(t *testing.T) {
 	scenarios := []struct {

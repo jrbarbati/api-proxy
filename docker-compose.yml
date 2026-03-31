@@ -48,5 +48,14 @@ services:
       redis:
         condition: service_healthy
 
+  api-proxy-ui:
+    build:
+      context: ~/dev/api-proxy-ui
+    ports:
+      - "8081:80"
+    depends_on:
+      api-proxy:
+        condition: service_healthy
+
 volumes:
   mysql_data:

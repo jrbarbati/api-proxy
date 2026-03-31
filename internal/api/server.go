@@ -99,10 +99,10 @@ func (server *Server) Start() error {
 	defer stop()
 
 	requestLogger.Start(ctx)
-	routeCache.StartSync(ctx, 2*time.Minute, func() ([]*model.Route, error) { // TODO: Do some benchmarking on routeRepo.FindActiveByFilter and/orgRepo the syncCache() method and adjust the interval accordingly
+	routeCache.StartSync(ctx, 1*time.Minute, func() ([]*model.Route, error) { // TODO: Do some benchmarking on routeRepo.FindActiveByFilter and/orgRepo the syncCache() method and adjust the interval accordingly
 		return routeRepo.FindActiveByFilter(nil)
 	})
-	rateLimiter.StartSync(ctx, 5*time.Minute, func() ([]*model.RateLimit, error) {
+	rateLimiter.StartSync(ctx, 1*time.Minute, func() ([]*model.RateLimit, error) {
 		return rateLimitRepo.FindActiveByFilter(nil)
 	})
 	httpServer := server.listenAndServe(router)

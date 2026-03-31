@@ -51,11 +51,13 @@ services:
   api-proxy-ui:
     build:
       context: ~/dev/api-proxy-ui
+    environment:
+      - BACKEND_URL=http://api-proxy-api-proxy-1:8080
     ports:
       - "8081:80"
     depends_on:
       api-proxy:
-        condition: service_healthy
+        condition: service_started
 
 volumes:
   mysql_data:

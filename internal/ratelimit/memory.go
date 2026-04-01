@@ -8,17 +8,28 @@ import (
 	"time"
 )
 
+type tokenBucket interface {
+	Start(context.Context)
+	Stop()
+	UpdateCapacity(newCapacity int)
+	requestToken() bool
+}
+
 type MemoryRateLimiter struct {
-	rw        sync.RWMutex
-	orgLimits map[int]*bucket
-	saLimits  map[int]*bucket
+	rw             sync.RWMutex
+	orgLimits      map[int]tokenBucket
+	saLimits       map[int]tokenBucket
+	newTokenBucket func(int) tokenBucket
 }
 
 func NewMemoryRateLimiter() *MemoryRateLimiter {
 	return &MemoryRateLimiter{
 		rw:        sync.RWMutex{},
-		orgLimits: make(map[int]*bucket),
-		saLimits:  make(map[int]*bucket),
+		orgLimits: make(map[int]tokenBucket),
+		saLimits:  make(map[int]tokenBucket),
+		newTokenBucket: func(limit int) tokenBucket {
+			return newBucket(limit)
+		},
 	}
 }
 
@@ -51,20 +62,20 @@ func (mrl *MemoryRateLimiter) StartSync(ctx context.Context, interval time.Durat
 	}()
 }
 
-func (mrl *MemoryRateLimiter) orgBucket(orgID int) (*bucket, bool) {
+func (mrl *MemoryRateLimiter) orgBucket(orgID int) (tokenBucket, bool) {
 	mrl.rw.RLock()
 	defer mrl.rw.RUnlock()
 
-	bucket, ok := mrl.orgLimits[orgID]
-	return bucket, ok
+	b, ok := mrl.orgLimits[orgID]
+	return b, ok
 }
 
-func (mrl *MemoryRateLimiter) saBucket(saID int) (*bucket, bool) {
+func (mrl *MemoryRateLimiter) saBucket(saID int) (tokenBucket, bool) {
 	mrl.rw.RLock()
 	defer mrl.rw.RUnlock()
 
-	bucket, ok := mrl.saLimits[saID]
-	return bucket, ok
+	b, ok := mrl.saLimits[saID]
+	return b, ok
 }
 
 func (mrl *MemoryRateLimiter) syncCache(ctx context.Context, findRateLimits func() ([]*model.RateLimit, error)) {
@@ -88,7 +99,7 @@ func (mrl *MemoryRateLimiter) syncCache(ctx context.Context, findRateLimits func
 			orgLimitsMap[limit.OrgID] = struct{}{}
 
 			if _, ok := mrl.orgLimits[limit.OrgID]; !ok {
-				mrl.orgLimits[limit.OrgID] = newBucket(limit.LimitPerMinute)
+				mrl.orgLimits[limit.OrgID] = mrl.newTokenBucket(limit.LimitPerMinute)
 				mrl.orgLimits[limit.OrgID].Start(ctx)
 			} else {
 				mrl.orgLimits[limit.OrgID].UpdateCapacity(limit.LimitPerMinute)
@@ -97,7 +108,7 @@ func (mrl *MemoryRateLimiter) syncCache(ctx context.Context, findRateLimits func
 			saLimitsMap[*limit.ServiceAccountID] = struct{}{}
 
 			if _, ok := mrl.saLimits[*limit.ServiceAccountID]; !ok {
-				mrl.saLimits[*limit.ServiceAccountID] = newBucket(limit.LimitPerMinute)
+				mrl.saLimits[*limit.ServiceAccountID] = mrl.newTokenBucket(limit.LimitPerMinute)
 				mrl.saLimits[*limit.ServiceAccountID].Start(ctx)
 			} else {
 				mrl.saLimits[*limit.ServiceAccountID].UpdateCapacity(limit.LimitPerMinute)

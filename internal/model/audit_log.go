@@ -18,7 +18,7 @@ const (
 	RATE_LIMIT EntityType = "rate_limit"
 
 	CREATE Action = "create"
-	UPDATE Action = "create"
+	UPDATE Action = "update"
 )
 
 type AuditLog struct {

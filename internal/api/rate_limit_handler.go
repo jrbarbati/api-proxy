@@ -1,6 +1,7 @@
 package api
 
 import (
+	"api-proxy/internal/api/middleware"
 	"api-proxy/internal/model"
 	"log/slog"
 	"net/http"
@@ -17,11 +18,15 @@ type RateLimitDataStorer interface {
 }
 
 type RateLimitHandler struct {
-	dataStore RateLimitDataStorer
+	auditLogger middleware.AuditLogger
+	dataStore   RateLimitDataStorer
 }
 
-func NewRateLimitHandler(rateLimitDataStore RateLimitDataStorer) *RateLimitHandler {
-	return &RateLimitHandler{dataStore: rateLimitDataStore}
+func NewRateLimitHandler(auditLogger middleware.AuditLogger, rateLimitDataStore RateLimitDataStorer) *RateLimitHandler {
+	return &RateLimitHandler{
+		auditLogger: auditLogger,
+		dataStore:   rateLimitDataStore,
+	}
 }
 
 func (rlh *RateLimitHandler) Router() http.Handler {
@@ -29,8 +34,8 @@ func (rlh *RateLimitHandler) Router() http.Handler {
 
 	r.Get("/", rlh.handleGetRateLimits)
 	r.Get("/{id}", rlh.handleGetRateLimit)
-	r.Post("/", rlh.handleCreateRateLimit)
-	r.Put("/{id}", rlh.handleUpdateRateLimit)
+	r.With(middleware.LogAuditable(rlh.auditLogger, model.RATE_LIMIT, model.CREATE)).Post("/", rlh.handleCreateRateLimit)
+	r.With(middleware.LogAuditable(rlh.auditLogger, model.RATE_LIMIT, model.UPDATE)).Put("/{id}", rlh.handleUpdateRateLimit)
 
 	return r
 }

@@ -86,8 +86,8 @@ func (server *Server) Start() error {
 
 		r.Mount("/users", NewInternalUserHandler(internalUserRepo).Router())
 		r.Mount("/orgs", NewOrgHandler(orgRepo).Router())
-		r.Mount("/rate-limits", NewRateLimitHandler(rateLimitRepo).Router())
-		r.Mount("/routes", NewRouteHandler(routeRepo).Router())
+		r.Mount("/rate-limits", NewRateLimitHandler(auditLogger, rateLimitRepo).Router())
+		r.Mount("/routes", NewRouteHandler(auditLogger, routeRepo).Router())
 		r.Mount("/service-accounts", NewServiceAccountHandler(serviceAccountRepo).Router())
 		r.Mount("/requests", NewRequestHandler(requestRepo).Router())
 	})

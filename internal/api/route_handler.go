@@ -1,6 +1,7 @@
 package api
 
 import (
+	"api-proxy/internal/api/middleware"
 	"api-proxy/internal/model"
 	"net/http"
 	"strconv"
@@ -16,11 +17,15 @@ type RouteDataStorer interface {
 }
 
 type RouteHandler struct {
-	dataStore RouteDataStorer
+	auditLogger middleware.AuditLogger
+	dataStore   RouteDataStorer
 }
 
-func NewRouteHandler(routeDataStore RouteDataStorer) *RouteHandler {
-	return &RouteHandler{dataStore: routeDataStore}
+func NewRouteHandler(auditLogger middleware.AuditLogger, routeDataStore RouteDataStorer) *RouteHandler {
+	return &RouteHandler{
+		auditLogger: auditLogger,
+		dataStore:   routeDataStore,
+	}
 }
 
 func (rh *RouteHandler) Router() http.Handler {
@@ -28,8 +33,8 @@ func (rh *RouteHandler) Router() http.Handler {
 
 	r.Get("/", rh.handleGetRoutes)
 	r.Get("/{id}", rh.handleGetRoute)
-	r.Post("/", rh.handleCreateRoute)
-	r.Put("/{id}", rh.handleUpdateRoute)
+	r.With(middleware.LogAuditable(rh.auditLogger, model.ROUTE, model.CREATE)).Post("/", rh.handleCreateRoute)
+	r.With(middleware.LogAuditable(rh.auditLogger, model.ROUTE, model.UPDATE)).Put("/{id}", rh.handleUpdateRoute)
 
 	return r
 }

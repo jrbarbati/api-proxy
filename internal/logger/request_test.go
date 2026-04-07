@@ -8,12 +8,12 @@ import (
 	"time"
 )
 
-type fakeDataStore struct {
+type fakeRouteDataStore struct {
 	requests []*model.Request
 	err      error
 }
 
-func (f *fakeDataStore) Insert(request *model.Request) (*model.Request, error) {
+func (f *fakeRouteDataStore) Insert(request *model.Request) (*model.Request, error) {
 	if f.err == nil {
 		f.requests = append(f.requests, request)
 		return f.requests[0], nil
@@ -35,8 +35,8 @@ func TestRequestLogger_Log(t *testing.T) {
 		expectedChanLen int
 		dataStore       RequestDataStorer
 	}{
-		{name: "Persisted", readFromChan: true, numLogs: 2, queueSize: 10, expectedChanLen: 2, dataStore: &fakeDataStore{}},
-		{name: "Dropped", readFromChan: false, numLogs: 1, queueSize: 0, expectedChanLen: 0, dataStore: &fakeDataStore{}},
+		{name: "Persisted", readFromChan: true, numLogs: 2, queueSize: 10, expectedChanLen: 2, dataStore: &fakeRouteDataStore{}},
+		{name: "Dropped", readFromChan: false, numLogs: 1, queueSize: 0, expectedChanLen: 0, dataStore: &fakeRouteDataStore{}},
 	}
 
 	for _, scenario := range scenarios {
@@ -91,14 +91,14 @@ func TestRequestLogger_Start(t *testing.T) {
 		entry     RequestLog
 		dataStore RequestDataStorer
 		cancelled bool
-		assert    func(t *testing.T, ds *fakeDataStore)
+		assert    func(t *testing.T, ds *fakeRouteDataStore)
 	}{
 		{
 			name:      "Persisted",
 			entry:     NewRequestLog(new(route), "GET", "/api/v1/test", 201, time.Duration(100)*time.Millisecond),
-			dataStore: &fakeDataStore{},
+			dataStore: &fakeRouteDataStore{},
 			cancelled: false,
-			assert: func(t *testing.T, ds *fakeDataStore) {
+			assert: func(t *testing.T, ds *fakeRouteDataStore) {
 				if len(ds.requests) != 1 {
 					t.Errorf("expected 1 persisted request, got %d", len(ds.requests))
 				}
@@ -107,9 +107,9 @@ func TestRequestLogger_Start(t *testing.T) {
 		{
 			name:      "Errored",
 			entry:     NewRequestLog(new(route), "GET", "/api/v1/test", 201, time.Duration(100)*time.Millisecond),
-			dataStore: &fakeDataStore{err: errors.New("test insert err")},
+			dataStore: &fakeRouteDataStore{err: errors.New("test insert err")},
 			cancelled: false,
-			assert: func(t *testing.T, ds *fakeDataStore) {
+			assert: func(t *testing.T, ds *fakeRouteDataStore) {
 				if len(ds.requests) > 0 {
 					t.Errorf("expected 0 persisted requests, got %d", len(ds.requests))
 				}
@@ -118,9 +118,9 @@ func TestRequestLogger_Start(t *testing.T) {
 		{
 			name:      "Cancelled",
 			entry:     NewRequestLog(new(route), "GET", "/api/v1/test", 201, time.Duration(100)*time.Millisecond),
-			dataStore: &fakeDataStore{},
+			dataStore: &fakeRouteDataStore{},
 			cancelled: true,
-			assert: func(t *testing.T, ds *fakeDataStore) {
+			assert: func(t *testing.T, ds *fakeRouteDataStore) {
 				if len(ds.requests) > 0 {
 					t.Errorf("expected 0 persisted requests (context cancelled), got %d", len(ds.requests))
 				}
@@ -145,7 +145,7 @@ func TestRequestLogger_Start(t *testing.T) {
 				requestLogger.Log(new(route), "GET", "/api/v1/test", 201, 100*time.Millisecond) // non-blocking
 			}
 
-			scenario.assert(t, scenario.dataStore.(*fakeDataStore))
+			scenario.assert(t, scenario.dataStore.(*fakeRouteDataStore))
 		})
 	}
 }

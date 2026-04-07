@@ -6,7 +6,10 @@ jwt:
 logging:
   request:
     queue_size: 150
-    retention_days: 7
+    retention_days: 14
+  audit:
+    queue_size: 20
+    retention_days: 180
 
 server:
   port: "8080"

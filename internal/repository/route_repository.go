@@ -117,10 +117,6 @@ func (rr *RouteRepository) findRoutes(query string, args ...any) ([]*model.Route
 		routes = append(routes, &route)
 	}
 
-	if err := result.Err(); err != nil {
-		return nil, err
-	}
-
 	return routes, nil
 }
 

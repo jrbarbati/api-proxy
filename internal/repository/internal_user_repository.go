@@ -106,10 +106,6 @@ func (iur *InternalUserRepository) findInternalUsers(query string, args ...any) 
 		internalUsers = append(internalUsers, &internalUser)
 	}
 
-	if err := result.Err(); err != nil {
-		return nil, err
-	}
-
 	return internalUsers, nil
 }
 

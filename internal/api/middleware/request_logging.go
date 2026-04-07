@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-type Logger interface {
+type RequestLogger interface {
 	Log(route *model.Route, method, url string, statusCode int, latency time.Duration)
 }
 
@@ -21,7 +21,7 @@ func (rr *responseRecorder) WriteHeader(code int) {
 	rr.ResponseWriter.WriteHeader(code)
 }
 
-func LogRequest(logger Logger) func(http.Handler) http.Handler {
+func LogRequest(requestLogger RequestLogger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			rr := &responseRecorder{ResponseWriter: w, statusCode: http.StatusOK}
@@ -45,7 +45,7 @@ func LogRequest(logger Logger) func(http.Handler) http.Handler {
 
 			route := MatchedRoute(r)
 
-			logger.Log(route, r.Method, r.URL.Path, rr.statusCode, end.Sub(start))
+			requestLogger.Log(route, r.Method, r.URL.Path, rr.statusCode, end.Sub(start))
 		})
 	}
 }

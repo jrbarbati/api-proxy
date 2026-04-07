@@ -120,10 +120,6 @@ func (rlr *RateLimitRepository) findRateLimits(query string, args ...any) ([]*mo
 		rateLimits = append(rateLimits, &rateLimit)
 	}
 
-	if err := result.Err(); err != nil {
-		return nil, err
-	}
-
 	return rateLimits, nil
 }
 

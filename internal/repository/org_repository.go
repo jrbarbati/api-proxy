@@ -90,10 +90,6 @@ func (or *OrgRepository) findOrgs(query string, args ...any) ([]*model.Org, erro
 		orgs = append(orgs, &org)
 	}
 
-	if err := result.Err(); err != nil {
-		return nil, err
-	}
-
 	return orgs, nil
 }
 

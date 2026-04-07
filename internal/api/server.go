@@ -28,6 +28,7 @@ type Server struct {
 	port                  string
 	db                    *sql.DB
 	requestLogQueueSize   int
+	auditLogQueueSize     int
 	rateLimiter           string
 	redisUrl              string
 }
@@ -43,6 +44,7 @@ func NewServer(
 		adminJwtSigningSecret: c.JWTConfig.Admin.SigningSecret,
 		db:                    db,
 		requestLogQueueSize:   *c.LoggingConfig.LoggingRequestConfig.QueueSize,
+		auditLogQueueSize:     *c.LoggingConfig.LoggingAuditConfig.QueueSize,
 		rateLimiter:           c.RateLimitingConfig.Backend,
 		redisUrl:              c.RateLimitingConfig.Redis.URL,
 	}
@@ -69,8 +71,10 @@ func (server *Server) Start() error {
 	routeRepo := repository.NewRouteRepository(server.db)
 	serviceAccountRepo := repository.NewServiceAccountRepository(server.db)
 	requestRepo := repository.NewRequestRepository(server.db)
+	auditLogRepo := repository.NewAuditLogRepository(server.db)
 
 	requestLogger := logger.NewRequestLogger(requestRepo, server.requestLogQueueSize)
+	auditLogger := logger.NewAuditLogger(auditLogRepo, server.auditLogQueueSize)
 
 	authHandler := NewAuthHandler(server.jwtSigningSecret, server.adminJwtSigningSecret, serviceAccountRepo, internalUserRepo)
 
@@ -98,6 +102,7 @@ func (server *Server) Start() error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
+	auditLogger.Start(ctx)
 	requestLogger.Start(ctx)
 	routeCache.StartSync(ctx, 1*time.Minute, func() ([]*model.Route, error) { // TODO: Do some benchmarking on routeRepo.FindActiveByFilter and/orgRepo the syncCache() method and adjust the interval accordingly
 		return routeRepo.FindActiveByFilter(nil)

@@ -83,9 +83,5 @@ func (rr *RequestRepository) findRequests(query string, args ...any) ([]*model.R
 		requests = append(requests, &request)
 	}
 
-	if err := result.Err(); err != nil {
-		return nil, err
-	}
-
 	return requests, nil
 }

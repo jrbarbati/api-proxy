@@ -18,6 +18,9 @@ logging:
   request:
     queue_size: 150
     retention_days: 7
+  audit:
+    queue_size: 20
+    retention_days: 180
 
 server:
   port: "8080"
@@ -58,6 +61,10 @@ func TestLoadConfig(t *testing.T) {
 						QueueSize:     new(150),
 						RetentionDays: new(7),
 					},
+					LoggingAuditConfig: &LoggingAuditConfig{
+						QueueSize:     new(20),
+						RetentionDays: new(180),
+					},
 				},
 				Server: &ServerConfig{
 					Port: "8080",
@@ -96,6 +103,10 @@ func TestLoadConfig(t *testing.T) {
 					LoggingRequestConfig: &LoggingRequestConfig{
 						QueueSize:     new(150),
 						RetentionDays: new(10),
+					},
+					LoggingAuditConfig: &LoggingAuditConfig{
+						QueueSize:     new(20),
+						RetentionDays: new(180),
 					},
 				},
 				Server: &ServerConfig{

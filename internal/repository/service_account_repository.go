@@ -122,10 +122,6 @@ func (sar *ServiceAccountRepository) findServiceAccounts(query string, args ...a
 		serviceAccounts = append(serviceAccounts, &serviceAccount)
 	}
 
-	if err := result.Err(); err != nil {
-		return nil, err
-	}
-
 	return serviceAccounts, nil
 }
 

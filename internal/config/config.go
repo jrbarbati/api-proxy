@@ -29,9 +29,15 @@ type Config struct {
 type LoggingConfig struct {
 	Level                string                `yaml:"level"`
 	LoggingRequestConfig *LoggingRequestConfig `yaml:"request"`
+	LoggingAuditConfig   *LoggingAuditConfig   `yaml:"audit"`
 }
 
 type LoggingRequestConfig struct {
+	QueueSize     *int `yaml:"queue_size"`
+	RetentionDays *int `yaml:"retention_days"`
+}
+
+type LoggingAuditConfig struct {
 	QueueSize     *int `yaml:"queue_size"`
 	RetentionDays *int `yaml:"retention_days"`
 }

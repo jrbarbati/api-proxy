@@ -130,8 +130,3 @@ func (server *Server) listenAndServe(r *chi.Mux) *http.Server {
 
 	return httpServer
 }
-
-// Port returns the port the server is listening on
-func (server *Server) Port() string {
-	return server.port
-}

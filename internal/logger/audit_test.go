@@ -55,14 +55,14 @@ func TestAuditLogger_Log(t *testing.T) {
 						t.Errorf("expected entity id %d, got %d", i, entry.EntityID)
 					}
 
-					if entry.EntityType != "Route" {
+					if entry.EntityType != "route" {
 						t.Errorf("expected entity type Route, got %s", entry.EntityType)
 					}
 					if entry.PerformedByID != 12 {
 						t.Errorf("expected performed by id 12, got %d", entry.PerformedByID)
 					}
-					if entry.Action != "CREATE" {
-						t.Errorf("expected action CREATE, got %s", entry.Action)
+					if entry.Action != "create" {
+						t.Errorf("expected action create, got %s", entry.Action)
 					}
 				}
 
